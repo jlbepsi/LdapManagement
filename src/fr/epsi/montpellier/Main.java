@@ -82,13 +82,22 @@ public class Main {
             String line;
             while ((line = in.readLine()) != null) {
                 // process line here
-                String[] values = line.split(";");
-                if (values.length == 6) {
-                    System.out.println(String.format("login=%s, nom=%s, prenom=%s, motDePasse=%s, email=%s, classe=%s",
-                            values[2], values[0], values[1], values[3], values[4], values[5]));
-                    manager.addUser(values[2], values[0], values[1], values[3], values[4], values[5]);
-                } else {
-                    System.err.println("Fichier mal formé, la ligne doit être: nom;prenom;login;motdepasse;mail;classe");
+
+                try {
+                    String[] values = line.split(";");
+                    if (values.length == 6) {
+                        System.out.println(String.format("login=%s, nom=%s, prenom=%s, motDePasse=%s, email=%s, classe=%s",
+                                values[2], values[0], values[1], values[3], values[4], values[5]));
+                        manager.addUser(values[2], values[0], values[1], values[3], values[4], values[5], "ROLE_USER");
+                    } else  if (values.length == 7) {
+                        System.out.println(String.format("login=%s, nom=%s, prenom=%s, motDePasse=%s, email=%s, classe=%s, role=%s",
+                                values[2], values[0], values[1], values[3], values[4], values[5], values[6]));
+                        manager.addUser(values[2], values[0], values[1], values[3], values[4], values[5], values[6]);
+                    } else {
+                        System.err.println("Fichier mal formé, la ligne doit être: nom;prenom;login;motdepasse;mail;classe[;role]");
+                    }
+                } catch (Exception e) {
+                    System.err.println("Fichier mal formé, la ligne doit être: nom;prenom;login;motdepasse;mail;classe[;role]");
                 }
             }
         } catch (FileNotFoundException e) {
@@ -96,7 +105,7 @@ public class Main {
         } catch (IOException e) {
             System.err.println("impossible de lire le fichier");
         } catch (Exception e) {
-            System.err.println("Fichier mal formé, la ligne doit être: nom;prenom;login;motdepasse;mail;classe");
+            System.err.println("Fichier mal formé, la ligne doit être: nom;prenom;login;motdepasse;mail;classe[;role]");
         }
     }
 

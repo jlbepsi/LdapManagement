@@ -23,8 +23,9 @@ public class LdapManager {
     private static String GROUPS_OU =  "ou=Groups," + BASE_DN;
 
     /** Attribut utilisé pour la classe */
-    private static final String ATTRIBUTE_NAME_CLASSE =  "description";
-    //private static final String ATTRIBUTE_NAME_CLASSE =  "localityName";
+    //private static final String ATTRIBUTE_NAME_CLASSE =  "description";
+    private static final String ATTRIBUTE_NAME_CLASSE =  "l";
+    private static final String ATTRIBUTE_NAME_ROLE =  "employeeType";
 
     private static final int PORT = 389;
 
@@ -35,11 +36,12 @@ public class LdapManager {
 
     public LdapManager(String hostname, String username, String password,
                        String baseDN, String usersOU, String groupsOU)  throws NamingException {
-        this(hostname, username, password);
-
         BASE_DN = baseDN;
         USERS_OU = "ou=" + usersOU + "," + BASE_DN;
         GROUPS_OU =  "ou=" + groupsOU + "," + BASE_DN;
+
+        this.hostname = hostname;
+        this.context = getInitialContext("cn=" + username + "," + BASE_DN, password);
     }
 
     public LdapManager(String hostname, String username, String password)  throws NamingException {
@@ -115,11 +117,12 @@ public class LdapManager {
     }
 
     public void addUser(UserLdap user) throws NamingException {
-        addUser(user.getLogin(), user.getNom(), user.getPrenom(), user.getMotDePasse(), user.getMail(), user.getClasse());
+        addUser(user.getLogin(), user.getNom(), user.getPrenom(), user.getMotDePasse(), user.getMail(),
+                user.getClasse(), user.getRole());
     }
 
     public void addUser(String login, String nom, String prenom, String motDePasse,
-            String email, String classe) throws NamingException {
+            String email, String classe, String role) throws NamingException {
 
         if (nom == null || prenom == null) {
             throw new NamingException("Les attributs de l'utilsateurs sont vides");
@@ -141,6 +144,7 @@ public class LdapManager {
         Attribute uid = new BasicAttribute("uid", login);
         Attribute mail = new BasicAttribute("mail", email);
         Attribute classeAttr = new BasicAttribute(ATTRIBUTE_NAME_CLASSE, classe.toUpperCase());
+        Attribute roleAttr = new BasicAttribute(ATTRIBUTE_NAME_ROLE, role.toUpperCase());
 
         // Add password
         Attribute userPassword = new BasicAttribute("userpassword", motDePasse);
@@ -154,17 +158,28 @@ public class LdapManager {
         container.put(mail);
         container.put(userPassword);
         container.put(classeAttr);
+        container.put(roleAttr);
 
         // Create the entry
-        context.createSubcontext(getUserDN(login), container);
+        String userDN = "uid=" + login + "," + USERS_OU;
+        context.createSubcontext(userDN, container);
     }
 
-    public boolean modifyUser(String username, UserLdap userToUpdate) throws NamingException {
+    public boolean updateUser(String username, UserLdap userToUpdate) throws NamingException {
+
+        if (userToUpdate.getUserDN() == null) {
+            UserLdap userInitial = getUser(username);
+            if (userInitial == null)
+                return false;
+
+            userToUpdate.setUserDN(userInitial.getUserDN());
+        }
+
         try {
             ModificationItem[] mods = new ModificationItem[1];
             mods[0] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, new BasicAttribute(ATTRIBUTE_NAME_CLASSE, userToUpdate.getClasse()));
 
-            context.modifyAttributes(getUserDN(username), mods);
+            context.modifyAttributes(userToUpdate.getUserDN(), mods);
             return true;
         } catch (NameNotFoundException e) {
             // If the user is not found, ignore the error
@@ -174,8 +189,13 @@ public class LdapManager {
     }
 
     public boolean deleteUser(String username) throws NamingException {
+
+        UserLdap userInitial = getUser(username);
+        if (userInitial == null)
+            return false;
+
         try {
-            context.destroySubcontext(getUserDN(username));
+            context.destroySubcontext(userInitial.getUserDN());
             return true;
         } catch (NameNotFoundException e) {
             // If the user is not found, ignore the error
@@ -186,32 +206,27 @@ public class LdapManager {
 
     public UserLdap authenticateUser(String username, String password) {
 
-        if (isValidUser(username, password)) {
-            return getUser(username);
-        }
+        UserLdap user = getUser(username);
+        if (user != null) {
 
-        return null;
-    }
-
-    public boolean isValidUser(String username, String password) {
-
-        try {
-            DirContext context = getInitialContext(getUserDN(username), password);
-            return true;
-        } catch (javax.naming.NameNotFoundException e) {
-            //
-        } catch (NamingException e) {
-            // Any other error indicates couldn't log user in
-        }
-        finally {
             try {
-                context.close();
-            } catch (Exception ex) {
+                DirContext context = getInitialContext(user.getUserDN(), password);
+                return user;
+            } catch (javax.naming.NameNotFoundException e) {
+                //
+            } catch (NamingException e) {
+                // Any other error indicates couldn't log user in
+            }
+            finally {
+                try {
+                    context.close();
+                } catch (Exception ex) {
 
+                }
             }
         }
 
-        return false;
+        return null;
     }
 
     private DirContext getInitialContext(String userDn, String password)
@@ -232,20 +247,26 @@ public class LdapManager {
         return new InitialDirContext(props);
     }
 
-
-    private String getUserDN(String username) {
-        return "uid=" + username + "," + USERS_OU;
-    }
-
     private UserLdap buildUserFromAttributes(SearchResult result) throws NamingException {
 
         // Get the node's attributes
         Attributes attrs = result.getAttributes();
 
-        return new UserLdap(attrs.get("uid").get(0).toString(),
+        UserLdap user = new UserLdap(attrs.get("uid").get(0).toString(),
                 attrs.get("sn").get(0).toString(),
                 attrs.get("givenName").get(0).toString(),
                 attrs.get(ATTRIBUTE_NAME_CLASSE).get(0).toString(),
                 attrs.get("mail").get(0).toString());
+
+        if (attrs.get("ATTRIBUTE_NAME_ROLE") != null) {
+            String role = attrs.get("ATTRIBUTE_NAME_ROLE").get(0).toString();
+            if (role != null)
+                user.setRole(role);
+        }
+
+        // Fixe le DN de l'utilisateur
+        user.setUserDN(result.getNameInNamespace());
+
+        return user;
     }
 }

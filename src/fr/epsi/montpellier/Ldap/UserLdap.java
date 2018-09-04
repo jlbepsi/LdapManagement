@@ -1,6 +1,7 @@
 package fr.epsi.montpellier.Ldap;
 
 public class UserLdap {
+    private String userDN;
     private String login;
     private String nom;
     private String prenom;
@@ -59,4 +60,11 @@ public class UserLdap {
     public void setRole(String role) {
         this.role = role;
     }
+
+    public String getUserDN() { return userDN; }
+    public void setUserDN(String userDN) {
+        this.userDN = userDN;
+    }
+
+
 }
