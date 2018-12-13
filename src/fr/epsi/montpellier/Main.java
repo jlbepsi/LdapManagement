@@ -7,7 +7,6 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.ResourceBundle;
 
@@ -65,6 +64,14 @@ public class Main {
                 }
             } else {
                 System.out.println("Aucun argument");
+                //showClasses("B3");
+
+                UserLdap user =  manager.authenticateUser("admin.test", "123ABC");
+
+                if (user == null)
+                    System.out.println("NON Authentifié");
+                else
+                    System.out.println("utilisateur authentifié");
             }
 
 

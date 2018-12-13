@@ -1,7 +1,12 @@
 package fr.epsi.montpellier.Ldap;
 
+//import com.fasterxml.jackson.annotation.JsonIgnore;
+
+
 public class UserLdap {
+    //@JsonIgnore
     private String userDN;
+
     private String login;
     private String nom;
     private String prenom;
@@ -10,15 +15,23 @@ public class UserLdap {
     private String mail;
     private String role;
 
-    public UserLdap(String login, String nom, String prenom, String classe, String mail) {
+    public UserLdap() {
+
+    }
+
+    /*public UserLdap(String login, String nom, String prenom, String classe, String mail) {
         this(login, nom, prenom, classe, mail,"ROLE_USER");
     }
 
     public UserLdap(String login, String nom, String prenom, String classe, String mail, String role) {
+        this(login, nom, prenom, null, classe, mail,"ROLE_USER");
+    }*/
 
+    public UserLdap(String login, String nom, String prenom, String motDePasse, String classe, String mail, String role) {
         this.login = login;
         this.nom = nom;
         this.prenom = prenom;
+        this.motDePasse = motDePasse;
         this.mail = mail;
         this.classe = classe;
         this.role = role;
