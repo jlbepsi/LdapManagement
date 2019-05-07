@@ -4,5 +4,5 @@ admin_login=<le login admin>
 admin_password=<le mot de passe>
 
 base_dn=dc=example,dc=com
-ou_utilisateurs=ou=Utilisateurs,dc=example,dc=com
-ou_groups=ou=Groups,dc=example,dc=com
+ou_utilisateurs=ou=Pedago,ou=Utilisateurs
+ou_groups=ou=Groups

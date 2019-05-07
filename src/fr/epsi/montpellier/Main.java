@@ -64,14 +64,14 @@ public class Main {
                 }
             } else {
                 System.out.println("Aucun argument");
-                //showClasses("B3");
+                showClasses("all");
 
-                UserLdap user =  manager.authenticateUser("admin.test", "123ABC");
-
+                /*UserLdap user =  manager.authenticateUser("admin.test", "123ABC");
                 if (user == null)
                     System.out.println("NON Authentifié");
                 else
                     System.out.println("utilisateur authentifié");
+                */
             }
 
 
@@ -138,6 +138,14 @@ public class Main {
                 System.out.println("  - Nom complet : " + user.getNomComplet());
                 System.out.println("  - Mail : " + user.getMail());
                 System.out.println("  - Classe : " + user.getClasse());
+                if (user.isBts()) {
+                    System.out.println("  - BTS : oui");
+                    System.out.println("  -   Parcours : " + user.getBtsParcours());
+                    System.out.println("  -   Numéro : " + user.getBtsNumero());
+
+                } else
+                    System.out.println("  - BTS : non");
+
             }
         }
     }

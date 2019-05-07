@@ -14,18 +14,13 @@ public class UserLdap {
     private String classe;
     private String mail;
     private String role;
+    private boolean bts;
+    private String btsParcours = "";
+    private String btsNumero = "";
 
     public UserLdap() {
 
     }
-
-    /*public UserLdap(String login, String nom, String prenom, String classe, String mail) {
-        this(login, nom, prenom, classe, mail,"ROLE_USER");
-    }
-
-    public UserLdap(String login, String nom, String prenom, String classe, String mail, String role) {
-        this(login, nom, prenom, null, classe, mail,"ROLE_USER");
-    }*/
 
     public UserLdap(String login, String nom, String prenom, String motDePasse, String classe, String mail, String role) {
         this.login = login;
@@ -35,20 +30,21 @@ public class UserLdap {
         this.mail = mail;
         this.classe = classe;
         this.role = role;
+        this.bts = false;
     }
 
     public String getLogin() {
         return login;
     }
     public void setLogin(String login) {
-        this.login = login;
+        this.login = login.toLowerCase();
     }
 
     public String getNom() {
         return nom;
     }
     public void setNom(String nom) {
-        this.nom = nom;
+        this.nom = nom.toUpperCase();
     }
 
     public String getPrenom() { return prenom; }
@@ -60,18 +56,18 @@ public class UserLdap {
     public String getNomComplet() { return this.nom + " " + this.prenom; }
 
     public String getMail() { return mail; }
-    public void setMail(String mail) { this.mail = mail; }
+    public void setMail(String mail) { this.mail = mail.toLowerCase(); }
 
     public String getClasse() {
         return classe;
     }
     public void setClasse(String classe) {
-        this.classe = classe;
+        this.classe = classe.toUpperCase();
     }
 
     public String getRole() { return role; }
     public void setRole(String role) {
-        this.role = role;
+        this.role = role.toUpperCase();
     }
 
     public String getUserDN() { return userDN; }
@@ -79,5 +75,27 @@ public class UserLdap {
         this.userDN = userDN;
     }
 
+    /*
+        BTS
+     */
+    public boolean isBts() {
+        return bts;
+    }
+    public void setBts(boolean bts) {
+        this.bts = bts;
+    }
 
+    public String getBtsParcours() {
+        return btsParcours;
+    }
+    public void setBtsParcours(String btsParcours) {
+        this.btsParcours = btsParcours.toUpperCase();
+    }
+
+    public String getBtsNumero() {
+        return btsNumero;
+    }
+    public void setBtsNumero(String btsNumero) {
+        this.btsNumero = btsNumero;
+    }
 }
