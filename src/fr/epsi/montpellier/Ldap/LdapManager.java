@@ -10,8 +10,10 @@ import javax.naming.NameNotFoundException;
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
 import javax.naming.directory.*;
-import java.text.SimpleDateFormat;
+import java.security.NoSuchAlgorithmException;
 import java.util.*;
+
+import static fr.epsi.montpellier.Ldap.SHAEncryption.encryptLdapPassword;
 
 public class LdapManager {
     /** The OU (organizational unit) to add users to */
@@ -29,6 +31,8 @@ public class LdapManager {
     private static final String ATTRIBUTE_NAME_BTS =  "businessCategory";
     private static final String ATTRIBUTE_NAME_BTS_PARCOURS =  "description";
     private static final String ATTRIBUTE_NAME_BTS_NUMERO =  "departmentNumber";
+    private static final String ATTRIBUTE_PASSWORD_COPY =  "street";
+    private static final String ATTRIBUTE_ACTIVEUSER =  "roomNumber";
 
     private static final int PORT = 389;
 
@@ -93,7 +97,11 @@ public class LdapManager {
     }
 
 
-    public UserLdap getUser(String userName) {
+    public UserLdap getUser(String login) {
+        return getUser(login, false);
+    }
+
+    private UserLdap getUser(String login, boolean userInternalUser) {
         UserLdap user = null;
 
 
@@ -101,7 +109,7 @@ public class LdapManager {
             SearchControls searchCtrls = new SearchControls();
             searchCtrls.setSearchScope(SearchControls.SUBTREE_SCOPE);
 
-            String filter = "(&(objectClass=inetOrgPerson)(uid=" + userName + "))";
+            String filter = "(&(objectClass=inetOrgPerson)(uid=" + login + "))";
             NamingEnumeration items = ldapContext.search(USERS_OU, filter, searchCtrls);
 
             if (items.hasMoreElements())
@@ -109,7 +117,7 @@ public class LdapManager {
                 // Each item is a SearchResult object
                 SearchResult result = (SearchResult) items.next();
 
-                user = buildUserFromAttributes(result);
+                user = userInternalUser ? buildInternalUserFromAttributes(result) : buildUserFromAttributes(result);
             }
 
         } catch (NamingException e) {
@@ -127,7 +135,7 @@ public class LdapManager {
     public void addUser(UserLdap user) throws NamingException {
 
         if (user==null) {
-            throw new NamingException("Les attributs de l'utilisateurs sont vides");
+            throw new NamingException("L'utilisateur est non renseigné");
         }
         if (user.getNom() == null || user.getPrenom() == null) {
             throw new NamingException("Les attributs de l'utilisateurs sont vides");
@@ -152,7 +160,14 @@ public class LdapManager {
         Attribute roleAttr = new BasicAttribute(ATTRIBUTE_NAME_ROLE, user.getRole());
 
         // Add password
-        Attribute userPassword = new BasicAttribute("userpassword", user.getMotDePasse());
+        String test = "Dernière modif ok";
+        String pwdCrypt;
+        try {
+            pwdCrypt = encryptLdapPassword(user.getMotDePasse());
+        } catch (NoSuchAlgorithmException e) {
+            throw new NamingException("Bad password encryption");
+        }
+        Attribute userPassword = new BasicAttribute("userpassword", pwdCrypt);
 
         // Add these to the container
         container.put(objClasses);
@@ -162,8 +177,13 @@ public class LdapManager {
         container.put(uid);
         container.put(mail);
         container.put(userPassword);
+        // On ajoute l'attribut qui est la copie du mdp
+        container.put(new BasicAttribute(ATTRIBUTE_PASSWORD_COPY, pwdCrypt));
         container.put(classeAttr);
         container.put(roleAttr);
+        // On ajoute l'attribut identifiant si l'utilisateur est actif (1) ou non (0)
+        container.put(new BasicAttribute(ATTRIBUTE_ACTIVEUSER, "1"));
+
 
         // Fixe le BTS
         if (user.isBts()) {
@@ -218,27 +238,72 @@ public class LdapManager {
         return false;
     }
 
+    public boolean updateUserPassword(String login, String password) throws NamingException {
+
+        UserLdap userInitial = getUser(login);
+        if (userInitial == null)
+            return false;
+
+        userInitial.setMotDePasse(password);
+        return updateUserPassword(userInitial);
+    }
+
+    public boolean updateUserPassword(UserLdap userToUpdate) throws NamingException {
+        if (userToUpdate == null || userToUpdate.getUserDN() == null)
+            return false;
+
+        try {
+            ModificationItem[] mods = new ModificationItem[1];
+
+            String userPasswordEncrypt = encryptLdapPassword(userToUpdate.getMotDePasse());
+            mods[0] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, new BasicAttribute("userpassword", userPasswordEncrypt));
+            /*
+            On place le mot de passe actuel dans l'attribut de copie du mdp
+            pour pouvoir l'utiliser dans les méthodes activateUser et deactivateUser
+             */
+            mods[0] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, new BasicAttribute(ATTRIBUTE_PASSWORD_COPY, userPasswordEncrypt));
+
+            ldapContext.modifyAttributes(userToUpdate.getUserDN(), mods);
+            return true;
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        } catch (NameNotFoundException e) {
+            // If the user is not found, ignore the error
+            e.printStackTrace();
+        }
+        return false;
+    }
+
     public boolean deactivateUser(String username) throws NamingException {
 
-        UserLdap userToUpdate = getUser(username);
+        UserLdap userToUpdate = getUser(username, true);
         if (userToUpdate == null)
             return false;
 
         try {
-            /*Calendar calendar = Calendar.getInstance();
-            calendar.setTime(new Date());
-            calendar.add(Calendar.YEAR, -100);
+            // Le type du user est InternalUserLdap
+            InternalUserLdap internalUserLdap = (InternalUserLdap) userToUpdate;
 
-            SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyyMMddHHmmss'Z'");
-            simpleDateFormat.setTimeZone(TimeZone.getTimeZone("GMT"));*/
+            ModificationItem[] mods = new ModificationItem[3];
 
+            /*
+             On lui attribue un mot de passe aléatoire pour que l'utilisateur ne puisse plus se connecter
+            */
+            UUID uuid = UUID.randomUUID();
+            Attribute userPassword = null;
+            try {
+                userPassword = new BasicAttribute("userpassword", encryptLdapPassword(uuid.toString()));
+            } catch (NoSuchAlgorithmException e) {
+                throw new NamingException("Bad password encryption");
+            }
+            mods[0] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, userPassword);
 
-            ModificationItem[] mods = new ModificationItem[1];
-            //mods[0] = new ModificationItem(DirContext.ADD_ATTRIBUTE, new BasicAttribute("pwdAccountLockedTime", simpleDateFormat.format(calendar.getTime())));
+            // Par défaut la classe est 'NA' pour les utilisateurs désactivés
+            mods[1] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, new BasicAttribute(ATTRIBUTE_NAME_CLASSE, "NA"));
 
+            // On modifie l'attribut identifiant si l'utilisateur est actif (1) ou non (0)
+            mods[2] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, new BasicAttribute(ATTRIBUTE_ACTIVEUSER, "0"));
 
-            //mods[0] = new ModificationItem(DirContext.ADD_ATTRIBUTE, new BasicAttribute("pwdAccountLockedTime", "000001010000Z"));
-            mods[0] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, new BasicAttribute(ATTRIBUTE_NAME_CLASSE, "NA"));
             ldapContext.modifyAttributes(userToUpdate.getUserDN(), mods);
             return true;
         } catch (NameNotFoundException e) {
@@ -250,13 +315,27 @@ public class LdapManager {
 
     public boolean activateUser(String username) throws NamingException {
 
-        UserLdap userToUpdate = getUser(username);
+        UserLdap userToUpdate = getUser(username, true);
         if (userToUpdate == null)
             return false;
 
         try {
-            ModificationItem[] mods = new ModificationItem[1];
-            //mods[0] = new ModificationItem(DirContext.REMOVE_ATTRIBUTE, new BasicAttribute("pwdAccountLockedTime"));
+            // Le type du user est InternalUserLdap
+            InternalUserLdap internalUserLdap = (InternalUserLdap) userToUpdate;
+
+            /*
+             On récupère le mot de passe initial depuis l'attribut de copie du mdp
+             */
+            String motDePasseCopie = internalUserLdap.getMotDePasseCopie();
+            /*
+             On replace le mot de passe avec la copie de celui-ci
+             */
+            ModificationItem[] mods = new ModificationItem[2];
+            mods[0] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, new BasicAttribute("userpassword", motDePasseCopie));
+
+            // On modifie l'attribut identifiant si l'utilisateur est actif (1) ou non (0)
+            mods[1] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, new BasicAttribute(ATTRIBUTE_ACTIVEUSER, "1"));
+
             ldapContext.modifyAttributes(userToUpdate.getUserDN(), mods);
             return true;
         } catch (NameNotFoundException e) {
@@ -285,7 +364,7 @@ public class LdapManager {
     public UserLdap authenticateUser(String username, String password) {
 
         UserLdap user = getUser(username);
-        if (user != null) {
+        if (user != null && user.isActive()) {
 
             Context userContext = null;
             try {
@@ -329,9 +408,9 @@ public class LdapManager {
     }
 
     private UserLdap buildUserFromAttributes(SearchResult result) throws NamingException {
-
         // Get the node's attributes
         Attributes attrs = result.getAttributes();
+
 
         UserLdap user = new UserLdap(attrs.get("uid").get(0).toString(),
                 attrs.get("sn").get(0).toString(),
@@ -340,6 +419,8 @@ public class LdapManager {
                 attrs.get(ATTRIBUTE_NAME_CLASSE).get(0).toString(),
                 attrs.get("mail").get(0).toString(),
                 getAttibuteValue(attrs.get(ATTRIBUTE_NAME_ROLE), "ROLE_USER"));
+        // Utilisateur Actif ou non
+        user.setActive(getAttibuteValue(attrs.get(ATTRIBUTE_ACTIVEUSER), "0").equals("1"));
 
         // Fixe le BTS
         String value = getAttibuteValue(attrs.get(ATTRIBUTE_NAME_BTS));
@@ -355,6 +436,20 @@ public class LdapManager {
         user.setUserDN(result.getNameInNamespace());
 
         return user;
+    }
+    private UserLdap buildInternalUserFromAttributes(SearchResult result) throws NamingException {
+        // Obtention de l'utilisateur
+        UserLdap user = buildUserFromAttributes(result);
+
+        // Get the node's attributes
+        Attributes attrs = result.getAttributes();
+        // Ajout de la copie du mdp
+        String passwordCopy = getAttibuteValue(attrs.get(ATTRIBUTE_PASSWORD_COPY), null);
+
+        InternalUserLdap internalUserLdap = new InternalUserLdap(user);
+        internalUserLdap.setMotDePasseCopie(passwordCopy);
+
+        return internalUserLdap;
     }
 
     private String getAttibuteValue(Attribute attribute, String defaultValue) throws NamingException {

@@ -1,5 +1,6 @@
 package fr.epsi.montpellier;
 
+import fr.epsi.montpellier.Ldap.InternalUserLdap;
 import fr.epsi.montpellier.Ldap.LdapManager;
 import fr.epsi.montpellier.Ldap.UserLdap;
 
@@ -15,7 +16,7 @@ import java.util.ResourceBundle;
 // https://www.jetbrains.com/help/idea/creating-and-running-your-first-java-application.html
 
 public class Main {
-    static LdapManager manager = null;
+    private static LdapManager manager = null;
 
     public static void main(String[] args) {
 
@@ -64,14 +65,36 @@ public class Main {
                 }
             } else {
                 System.out.println("Aucun argument");
-                showClasses("all");
 
-                /*UserLdap user =  manager.authenticateUser("admin.test", "123ABC");
+                // TODO Commenter les tests
+                //showClasses("B2");
+
+                String login = "test.v11", password = "123ABC";
+
+                manager.updateUserPassword("test.v1", password);
+                manager.updateUserPassword("test.v11", password);
+                manager.updateUserPassword("test.v2", password);
+
+                /*UserLdap user =  manager.authenticateUser(login, password);
                 if (user == null)
-                    System.out.println("NON Authentifié");
+                    System.out.println(login + ": NON Authentifié");
                 else
-                    System.out.println("utilisateur authentifié");
-                */
+                    System.out.println("Utilisateur '" + login + "' authentifié");
+
+                System.out.println("Desativate user");
+                manager.deactivateUser(login);
+                user =  manager.authenticateUser(login, password);
+                if (user == null)
+                    System.out.println(login + ": NON Authentifié");
+                else
+                    System.out.println("Utilisateur '" + login + "' authentifié");
+                System.out.println("Ativate user");
+                manager.activateUser(login);
+                user =  manager.authenticateUser(login, password);
+                if (user == null)
+                    System.out.println(login + ": NON Authentifié");
+                else
+                    System.out.println("Utilisateur '" + login + "' authentifié");*/
             }
 
 

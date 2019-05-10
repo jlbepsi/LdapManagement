@@ -7,6 +7,8 @@ public class UserLdap {
     //@JsonIgnore
     private String userDN;
 
+    private boolean isActive;
+
     private String login;
     private String nom;
     private String prenom;
@@ -31,6 +33,14 @@ public class UserLdap {
         this.classe = classe;
         this.role = role;
         this.bts = false;
+    }
+
+    public boolean isActive() {
+        return isActive;
+    }
+
+    public void setActive(boolean active) {
+        isActive = active;
     }
 
     public String getLogin() {
@@ -79,6 +89,10 @@ public class UserLdap {
         BTS
      */
     public boolean isBts() {
+        // On vérifie que la classe est B1 ou B2
+        if (bts && ! (classe.equalsIgnoreCase("B1") || classe.equalsIgnoreCase("B2"))) {
+            bts = false;
+        }
         return bts;
     }
     public void setBts(boolean bts) {
