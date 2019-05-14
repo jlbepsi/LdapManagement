@@ -3,11 +3,15 @@ package fr.epsi.montpellier;
 import fr.epsi.montpellier.Ldap.InternalUserLdap;
 import fr.epsi.montpellier.Ldap.LdapManager;
 import fr.epsi.montpellier.Ldap.UserLdap;
+import fr.epsi.montpellier.Utils.FileUtils;
 
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.ResourceBundle;
 
@@ -66,14 +70,23 @@ public class Main {
             } else {
                 System.out.println("Aucun argument");
 
-                // TODO Commenter les tests
-                //showClasses("B2");
+                showClasses("B2");
 
-                String login = "test.v11", password = "123ABC";
+
+                /*String directoryName = "/home/users/ldap/" + "test.file";
+                Path path = Paths.get(directoryName);
+                try {
+                    Files.createDirectory(path);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                FileUtils.deleteDirectory(path.toFile());
+                */
+
+
+                /*String login = "test.v11", password = "123ABC";
 
                 manager.updateUserPassword("test.v1", password);
-                manager.updateUserPassword("test.v11", password);
-                manager.updateUserPassword("test.v2", password);
 
                 /*UserLdap user =  manager.authenticateUser(login, password);
                 if (user == null)

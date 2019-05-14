@@ -5,11 +5,18 @@ package fr.epsi.montpellier.Ldap;
 // https://www.programcreek.com/java-api-examples/?code=wso2/msf4j/msf4j-master/samples/petstore/microservices/security/src/main/java/org/wso2/msf4j/examples/petstore/security/ldap/LDAPUserStoreManager.java#
 // http://www.javafaq.nu/java-example-code-409.html
 
+import fr.epsi.montpellier.Utils.FileUtils;
+
 import javax.naming.Context;
 import javax.naming.NameNotFoundException;
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
 import javax.naming.directory.*;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
 
@@ -40,6 +47,7 @@ public class LdapManager {
     private DirContext ldapContext;
 
 
+    private String usersLdapDirectory;
 
     public LdapManager(String hostname, String username, String password,
                        String baseDN, String usersOU, String groupsOU)  throws NamingException {
@@ -54,6 +62,14 @@ public class LdapManager {
     public LdapManager(String hostname, String username, String password)  throws NamingException {
         this.hostname = hostname;
         this.ldapContext = getInitialContext("cn=" + username + "," + BASE_DN, password);
+    }
+
+    public String getUsersLdapDirectory() {
+        return usersLdapDirectory;
+    }
+
+    public void setUsersLdapDirectory(String usersLdapDirectory) {
+        this.usersLdapDirectory = usersLdapDirectory;
     }
 
     public void close() {
@@ -160,7 +176,6 @@ public class LdapManager {
         Attribute roleAttr = new BasicAttribute(ATTRIBUTE_NAME_ROLE, user.getRole());
 
         // Add password
-        String test = "Dernière modif ok";
         String pwdCrypt;
         try {
             pwdCrypt = encryptLdapPassword(user.getMotDePasse());
@@ -199,6 +214,17 @@ public class LdapManager {
         // Create the entry
         String userDN = "uid=" + user.getLogin() + "," + USERS_OU;
         ldapContext.createSubcontext(userDN, container);
+
+        // Création du répertoire home de l'utilisateur
+        if (usersLdapDirectory != null && usersLdapDirectory.length() > 0) {
+            String directoryName = this.usersLdapDirectory + "/" + user.getLogin();
+            Path path = Paths.get(directoryName);
+            try {
+                Files.createDirectory(path);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     public boolean updateUser(String username, UserLdap userToUpdate) throws NamingException {
@@ -353,12 +379,41 @@ public class LdapManager {
 
         try {
             ldapContext.destroySubcontext(userInitial.getUserDN());
+
+
+            // Suppression du répertoire home de l'utilisateur
+            if (usersLdapDirectory != null && usersLdapDirectory.length() > 0) {
+                String directoryName = this.usersLdapDirectory + "/" + userInitial.getLogin();
+                File directory = new File(directoryName);
+
+                FileUtils.deleteDirectory(directory);
+            }
             return true;
         } catch (NameNotFoundException e) {
             // If the user is not found, ignore the error
         }
 
         return false;
+    }
+
+
+    public boolean setUsersToNA() throws NamingException {
+
+        // Obtention de tous les utilisateurs
+        List<UserLdap> users = listUsers(null);
+        // Bascule dans la classe NA
+        for (UserLdap user : users) {
+
+            try {
+                ModificationItem[] mods = new ModificationItem[1];
+                mods[0] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, new BasicAttribute(ATTRIBUTE_NAME_CLASSE, "NA"));
+                ldapContext.modifyAttributes(user.getUserDN(), mods);
+            } catch (NameNotFoundException e) {
+                // If the user is not found, ignore the error
+            }
+        }
+
+        return true;
     }
 
     public UserLdap authenticateUser(String username, String password) {
@@ -389,6 +444,18 @@ public class LdapManager {
         return null;
     }
 
+    //********************************
+    /*
+     * Méthodes pour la création / suppression de répertoire des utilsiateurs
+     */
+
+    /**
+     *
+     * @param userDn Login de l'utilisateur
+     * @param password Mot de passe de l'utilisateur
+     * @return DirContext
+     * @throws NamingException Erreur d'accès au LDAP
+     */
     private DirContext getInitialContext(String userDn, String password)
             throws NamingException {
 
