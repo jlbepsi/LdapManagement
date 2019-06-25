@@ -1,10 +1,10 @@
 package fr.epsi.montpellier.Ldap;
 
-//import com.fasterxml.jackson.annotation.JsonIgnore;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 public class UserLdap {
-    //@JsonIgnore
+    @JsonIgnore
     private String userDN;
 
     private boolean isActive;
