@@ -30,7 +30,10 @@ public class LdapManager {
     private static String USERS_OU = "ou=Utilisateurs,ou=Pedago," + BASE_DN;
 
     /** The OU (organizational unit) to add groups to */
-    private static String GROUPS_OU =  "ou=Groups," + BASE_DN;
+    private static String GROUPS_OU =  "ou=Groupes," + BASE_DN;
+
+    private static String GROUPE_ETUDIANTS = "Etudiants";
+    private static String GROUPE_INTERNES = "Internes";
 
     /** Attributs utilisés pour la classe */
     private static final String ATTRIBUTE_NAME_CLASSE =  "l";
@@ -87,6 +90,7 @@ public class LdapManager {
         try {
             SearchControls searchCtrls = new SearchControls();
             searchCtrls.setSearchScope(SearchControls.SUBTREE_SCOPE);
+            searchCtrls.setReturningAttributes(new String[] {"*", "memberOf"});
 
             String filter = classe == null ?
                     "(objectClass=inetOrgPerson)" :
@@ -98,7 +102,7 @@ public class LdapManager {
                 // Each item is a SearchResult object
                 SearchResult result = (SearchResult) items.next();
 
-                liste.add(buildUserFromAttributes(result));
+                liste.add(buildUserFromAttributes(result.getNameInNamespace(), result.getAttributes()));
             }
 
         } catch (NamingException e) {
@@ -116,6 +120,22 @@ public class LdapManager {
     public UserLdap getUser(String login) {
         return getUser(login, false);
     }
+    public UserLdap getUserFromDN(String dn) {
+        UserLdap user = null;
+
+        try {
+            Attributes attributes = ldapContext.getAttributes(dn, new String[] {"*", "memberOf"});
+
+            if (attributes != null) {
+                user = buildUserFromAttributes(dn, attributes);
+            }
+
+        } catch (NamingException e) {
+            e.printStackTrace();
+        }
+
+        return user;
+    }
 
     private UserLdap getUser(String login, boolean userInternalUser) {
         UserLdap user = null;
@@ -124,6 +144,7 @@ public class LdapManager {
         try {
             SearchControls searchCtrls = new SearchControls();
             searchCtrls.setSearchScope(SearchControls.SUBTREE_SCOPE);
+            searchCtrls.setReturningAttributes(new String[] {"*", "memberOf"});
 
             String filter = "(&(objectClass=inetOrgPerson)(uid=" + login + "))";
             NamingEnumeration items = ldapContext.search(USERS_OU, filter, searchCtrls);
@@ -133,7 +154,9 @@ public class LdapManager {
                 // Each item is a SearchResult object
                 SearchResult result = (SearchResult) items.next();
 
-                user = userInternalUser ? buildInternalUserFromAttributes(result) : buildUserFromAttributes(result);
+                user = userInternalUser ?
+                        buildInternalUserFromAttributes(result.getNameInNamespace(), result.getAttributes()) :
+                        buildUserFromAttributes(result.getNameInNamespace(), result.getAttributes());
             }
 
         } catch (NamingException e) {
@@ -215,27 +238,28 @@ public class LdapManager {
         String userDN = "uid=" + user.getLogin() + "," + USERS_OU;
         ldapContext.createSubcontext(userDN, container);
 
+
+        // Fixe le groupe
+        // Soit le groupe INTERNES si la classe commence par INT_, soit le groupe ETUDIANTS SINON
+        modifyGroupUser(
+                userDN,
+                user.getClasse().startsWith("INT_") ? LdapManager.GROUPE_INTERNES : LdapManager.GROUPE_ETUDIANTS,
+                true
+        );
+
         // Création du répertoire home de l'utilisateur
-        if (usersLdapDirectory != null && usersLdapDirectory.length() > 0) {
-            String directoryName = this.usersLdapDirectory + "/" + user.getLogin();
-            Path path = Paths.get(directoryName);
-            try {
-                Files.createDirectory(path);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
+        createHomeDirectory(user);
     }
 
     public boolean updateUser(String username, UserLdap userToUpdate) throws NamingException {
 
-        if (userToUpdate.getUserDN() == null) {
-            UserLdap userInitial = getUser(username);
-            if (userInitial == null)
-                return false;
+        if (userToUpdate == null)
+            return false;
 
-            userToUpdate.setUserDN(userInitial.getUserDN());
-        }
+        // Recherche de l'utilisateur à modifier
+        UserLdap userInitial = getUser(username);
+        if (userInitial == null)
+            return false;
 
         try {
             ModificationItem[] mods = new ModificationItem[7];
@@ -255,7 +279,20 @@ public class LdapManager {
 
             }
 
-            ldapContext.modifyAttributes(userToUpdate.getUserDN(), mods);
+            ldapContext.modifyAttributes(userInitial.getUserDN(), mods);
+
+            // Sil l'utilisateur a changé de groupe, on le met à jour
+            // Soit le groupe INTERNES si la classe commence par INT_, soit le groupe ETUDIANTS SINON
+            String oldGroup = userInitial.getClasse().startsWith("INT_") ? LdapManager.GROUPE_INTERNES : LdapManager.GROUPE_ETUDIANTS;
+            String newGroup = userToUpdate.getClasse().startsWith("INT_") ? LdapManager.GROUPE_INTERNES : LdapManager.GROUPE_ETUDIANTS;
+
+            if (! oldGroup.equals(newGroup)) {
+                // Suppression de l'utilisateur de l'ancien groupe
+                modifyGroupUser(userToUpdate.getUserDN(), oldGroup, false);
+                // Ajout de l'utilisateur au nouveau groupe
+                modifyGroupUser(userToUpdate.getUserDN(), newGroup, true);
+            }
+
             return true;
         } catch (NameNotFoundException e) {
             // If the user is not found, ignore the error
@@ -380,14 +417,8 @@ public class LdapManager {
         try {
             ldapContext.destroySubcontext(userInitial.getUserDN());
 
-
             // Suppression du répertoire home de l'utilisateur
-            if (usersLdapDirectory != null && usersLdapDirectory.length() > 0) {
-                String directoryName = this.usersLdapDirectory + "/" + userInitial.getLogin();
-                File directory = new File(directoryName);
-
-                FileUtils.deleteDirectory(directory);
-            }
+            deleteHomeDirectory(userInitial);
             return true;
         } catch (NameNotFoundException e) {
             // If the user is not found, ignore the error
@@ -399,8 +430,10 @@ public class LdapManager {
 
     public boolean setUsersToNA() throws NamingException {
 
-        // Obtention de tous les utilisateurs
-        List<UserLdap> users = listUsers(null);
+        // IMPORTANT: Seuls les utilisateurs du groupe Etudiants sont concernés !
+
+        // Obtention de tous les utilisateurs du groupe "Etudiants
+        List<UserLdap> users = listUsersOfGroups(GROUPE_ETUDIANTS);
         // Bascule dans la classe NA
         for (UserLdap user : users) {
 
@@ -444,10 +477,112 @@ public class LdapManager {
         return null;
     }
 
-    //********************************
     /*
-     * Méthodes pour la création / suppression de répertoire des utilsiateurs
+     *********************************
+     *
+     * Méthodes pour la création / suppression de répertoire des utilisateurs
      */
+
+    private void createHomeDirectory(UserLdap user) {
+        if (usersLdapDirectory != null && usersLdapDirectory.length() > 0) {
+            String directoryName = this.usersLdapDirectory + "/" + user.getLogin();
+            Path path = Paths.get(directoryName);
+            try {
+                Files.createDirectory(path);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private void deleteHomeDirectory(UserLdap user) {
+
+            if (usersLdapDirectory != null && usersLdapDirectory.length() > 0) {
+                String directoryName = this.usersLdapDirectory + "/" + user.getLogin();
+                File directory = new File(directoryName);
+
+                FileUtils.deleteDirectory(directory);
+            }
+    }
+
+    /**/
+
+
+    /*
+     *********************************
+     *
+     * Méthodes pour la gestion des groupes
+     */
+
+    public List<UserLdap> listUsersOfGroups(String group) {
+        List<UserLdap> liste = new ArrayList<UserLdap>();
+
+        String[] searchAttributes = new String[1];
+        searchAttributes[0] = "uniqueMember";
+
+        try {
+            Attributes attributes = ldapContext.getAttributes("cn=" + group + "," + GROUPS_OU, searchAttributes);
+            if (attributes != null) {
+                Attribute memberAtts = attributes.get("uniqueMember");
+                if (memberAtts != null) {
+                    NamingEnumeration items = memberAtts.getAll();
+                    while (items.hasMoreElements())
+                    {
+                        String userDN = (String) items.next();
+                        UserLdap user = getUserFromDN(userDN);
+
+                        liste.add(user);
+                    }
+                }
+            }
+        } catch (NamingException e) {
+            e.printStackTrace();
+        }
+
+        return liste;
+    }
+
+
+    private boolean modifyGroupUser(String userDN, String group, boolean addToGroup) {
+
+        if (userDN == null || group == null) {
+            return false;
+        }
+
+        try {
+            ModificationItem[] mods = new ModificationItem[1];
+            String groupDN = "cn=" + group + "," + GROUPS_OU;
+
+            Attribute mod = new BasicAttribute("uniqueMember", userDN);
+            mods[0] = new ModificationItem(addToGroup ? DirContext.ADD_ATTRIBUTE :  DirContext.REMOVE_ATTRIBUTE, mod);
+            ldapContext.modifyAttributes(groupDN, mods);
+
+            return true;
+        } catch (NamingException e) {
+            // If the user is not found, ignore the error
+        }
+
+        return false;
+    }
+
+    private static List<String> getMemberOfFromAttributes(Attribute attribute) {
+        List<String> memberOf = new ArrayList<String>();
+
+        try {
+            NamingEnumeration items = attribute.getAll();
+            while (items.hasMoreElements())
+            {
+                memberOf.add((String) items.next());
+            }
+        } catch (NamingException e) {
+            e.printStackTrace();
+        }
+
+        return memberOf;
+    }
+
+    /**/
+
 
     /**
      *
@@ -474,10 +609,9 @@ public class LdapManager {
         return new InitialDirContext(props);
     }
 
-    private UserLdap buildUserFromAttributes(SearchResult result) throws NamingException {
-        // Get the node's attributes
-        Attributes attrs = result.getAttributes();
-
+    private UserLdap buildUserFromAttributes(String dnUser, Attributes attrs) throws NamingException {
+        if (attrs == null)
+            return null;
 
         UserLdap user = new UserLdap(attrs.get("uid").get(0).toString(),
                 attrs.get("sn").get(0).toString(),
@@ -485,33 +619,37 @@ public class LdapManager {
                 null,
                 attrs.get(ATTRIBUTE_NAME_CLASSE).get(0).toString(),
                 attrs.get("mail").get(0).toString(),
-                getAttibuteValue(attrs.get(ATTRIBUTE_NAME_ROLE), "ROLE_USER"));
+                getAttributeValue(attrs.get(ATTRIBUTE_NAME_ROLE), "ROLE_USER"));
         // Utilisateur Actif ou non
-        user.setActive(getAttibuteValue(attrs.get(ATTRIBUTE_ACTIVEUSER), "0").equals("1"));
+        user.setActive(getAttributeValue(attrs.get(ATTRIBUTE_ACTIVEUSER), "0").equals("1"));
+
+        // Groupe de l'utilisateur
+        Attribute groups = attrs.get("memberof");
+        if (groups != null) {
+            user.setGroupe(getMemberOfFromAttributes(groups));
+        }
 
         // Fixe le BTS
-        String value = getAttibuteValue(attrs.get(ATTRIBUTE_NAME_BTS));
+        String value = getAttributeValue(attrs.get(ATTRIBUTE_NAME_BTS));
         if (value != null && value.equalsIgnoreCase("BTS")) {
             user.setBts(true);
 
-            user.setBtsParcours(getAttibuteValue(attrs.get(ATTRIBUTE_NAME_BTS_PARCOURS)));
-            user.setBtsNumero(getAttibuteValue(attrs.get(ATTRIBUTE_NAME_BTS_NUMERO)));
+            user.setBtsParcours(getAttributeValue(attrs.get(ATTRIBUTE_NAME_BTS_PARCOURS)));
+            user.setBtsNumero(getAttributeValue(attrs.get(ATTRIBUTE_NAME_BTS_NUMERO)));
         }
 
 
         // Fixe le DN de l'utilisateur
-        user.setUserDN(result.getNameInNamespace());
+        user.setUserDN(dnUser);
 
         return user;
     }
-    private UserLdap buildInternalUserFromAttributes(SearchResult result) throws NamingException {
+    private UserLdap buildInternalUserFromAttributes(String dnUser, Attributes attrs) throws NamingException {
         // Obtention de l'utilisateur
-        UserLdap user = buildUserFromAttributes(result);
+        UserLdap user = buildUserFromAttributes(dnUser, attrs);
 
-        // Get the node's attributes
-        Attributes attrs = result.getAttributes();
         // Ajout de la copie du mdp
-        String passwordCopy = getAttibuteValue(attrs.get(ATTRIBUTE_PASSWORD_COPY), null);
+        String passwordCopy = getAttributeValue(attrs.get(ATTRIBUTE_PASSWORD_COPY), null);
 
         InternalUserLdap internalUserLdap = new InternalUserLdap(user);
         internalUserLdap.setMotDePasseCopie(passwordCopy);
@@ -519,16 +657,12 @@ public class LdapManager {
         return internalUserLdap;
     }
 
-    private String getAttibuteValue(Attribute attribute, String defaultValue) throws NamingException {
+    private static String getAttributeValue(Attribute attribute, String defaultValue) throws NamingException {
 
-        if (attribute != null) {
-            Object attributeValue = attribute.get(0);
-            if (attributeValue != null)
-                return attributeValue.toString();
-        }
-        return defaultValue;
+        Object attributeValue = (attribute == null ? null : attribute.get(0));
+        return attributeValue == null ? defaultValue : attributeValue.toString();
     }
-    private String getAttibuteValue(Attribute attribute) throws NamingException {
-        return getAttibuteValue(attribute, null);
+    private static String getAttributeValue(Attribute attribute) throws NamingException {
+        return getAttributeValue(attribute, null);
     }
 }

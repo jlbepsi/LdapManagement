@@ -15,6 +15,9 @@ Se connecter au LDAP
 
 Créer l'aborescence suivante:
 montpellier.lan
+    Groupes
+        cn=Etudiants
+        cn=Interne
 	Utilisateurs
 		Interne
 		Pedago
@@ -37,6 +40,25 @@ Fichier ldif
 	objectClass: organizationalUnit
 	objectClass: top
 	ou: Interne
+
+    dn: ou=Groupes,dc=montpellier,dc=lan
+    changetype: add
+    objectClass: organizationalUnit
+    objectClass: top
+    ou: Groupes
+
+    dn: cn=Etudiants,ou=Groupes,dc=montpellier,dc=lan
+    changetype: add
+    objectClass: groupOfUniqueNames
+    objectClass: top
+    cn: Etudiants
+
+    dn: cn=Internes,ou=Groupes,dc=montpellier,dc=lan
+    changetype: add
+    objectClass: groupOfUniqueNames
+    objectClass: top
+    cn: Interne
+
 
 
 

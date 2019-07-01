@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.ResourceBundle;
 
@@ -70,8 +71,31 @@ public class Main {
             } else {
                 System.out.println("Aucun argument");
 
-                showClasses("B2");
 
+                /*
+                manager.addUser("test.new2", "TEST", "etudiant2", "123456", "etudiant2@test.com", "B2", "ROLE_USER");
+                manager.addUser("test.new3", "TEST", "etudiant3", "123456", "etudiant3@test.com", "B2", "ROLE_USER");
+                manager.addUser("test.new4", "TEST", "etudiant4", "123456", "etudiant4@test.com", "B2", "ROLE_USER");
+                manager.addUser("test.administratif", "TEST", "administratif", "123456", "administratif@test.com", "INT_ADMIN", "ROLE_USER");
+                */
+
+                UserLdap user = manager.getUser("test.new");
+                List<UserLdap> liste = new ArrayList<>();
+                liste.add(user);
+                System.out.println("-- Affichage de l'utilisateur");
+                showList(liste);
+
+                user.setClasse("INT_PROF");
+                manager.updateUser("test.new", user);
+
+                System.out.println("-- Liste des utilisateur du groupe 'Internes");
+                showList(manager.listUsersOfGroups("Internes"));
+                System.out.println("-- Liste des utilisateur du groupe 'Etudiants");
+                showList(manager.listUsersOfGroups("Etudiants"));
+
+                //showClasses("B2");
+                //showList(manager.listUsersOfGroups("Etudiants"));
+                //showList(manager.listUsersOfGroups("Internes"));
 
                 /*String directoryName = "/home/users/ldap/" + "test.file";
                 Path path = Paths.get(directoryName);
@@ -166,36 +190,34 @@ public class Main {
         if (liste == null) {
             System.out.println("Aucun résultat");
         } else {
+            showList(liste);
+        }
+    }
 
-            for (UserLdap user : liste) {
-                System.out.println("Utilisateur : " + user.getLogin());
-                System.out.println("  - Nom : " + user.getNom());
-                System.out.println("  - Prénom : " + user.getPrenom());
-                System.out.println("  - Nom complet : " + user.getNomComplet());
-                System.out.println("  - Mail : " + user.getMail());
-                System.out.println("  - Classe : " + user.getClasse());
-                if (user.isBts()) {
-                    System.out.println("  - BTS : oui");
-                    System.out.println("  -   Parcours : " + user.getBtsParcours());
-                    System.out.println("  -   Numéro : " + user.getBtsNumero());
+    private static void showList(List<UserLdap> liste) {
 
-                } else
-                    System.out.println("  - BTS : non");
+        for (UserLdap user : liste) {
+            System.out.println("Utilisateur : " + user.getLogin());
+            System.out.println("  - Nom : " + user.getNom());
+            System.out.println("  - Prénom : " + user.getPrenom());
+            System.out.println("  - Nom complet : " + user.getNomComplet());
+            System.out.println("  - Mail : " + user.getMail());
+            System.out.println("  - Classe : " + user.getClasse());
+            if (user.isBts()) {
+                System.out.println("  - BTS : oui");
+                System.out.println("  -   Parcours : " + user.getBtsParcours());
+                System.out.println("  -   Numéro : " + user.getBtsNumero());
 
+            } else
+                System.out.println("  - BTS : non");
+
+            System.out.println("  - Goupe : ");
+            if (user.getGroupe() != null) {
+                for (String group : user.getGroupe()) {
+                    System.out.println("            " + group + ", ");
+                }
             }
         }
     }
 
-    /*
-        System.out.println("*****        Test ajout user B3");
-        manager.addUser("test.java", "JAVA", "Test", "123ABC", "B3");
-        manager.deleteUser("test.java");
-
-        boolean valide = manager.isValidUser("test.java", "123ABC");
-        System.out.println("isValid(test.java) = " + valide);
-
-        List<UserLdap> liste = new ArrayList<UserLdap>();
-        liste.add(manager.getUser("test.java"));
-        showList(liste);
-    */
 }
