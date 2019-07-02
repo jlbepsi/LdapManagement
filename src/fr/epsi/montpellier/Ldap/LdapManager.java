@@ -117,9 +117,6 @@ public class LdapManager {
     }
 
 
-    public UserLdap getUser(String login) {
-        return getUser(login, false);
-    }
     public UserLdap getUserFromDN(String dn) {
         UserLdap user = null;
 
@@ -137,6 +134,9 @@ public class LdapManager {
         return user;
     }
 
+    public UserLdap getUser(String login) {
+        return getUser(login, false);
+    }
     private UserLdap getUser(String login, boolean userInternalUser) {
         UserLdap user = null;
 
@@ -316,7 +316,7 @@ public class LdapManager {
             return false;
 
         try {
-            ModificationItem[] mods = new ModificationItem[1];
+            ModificationItem[] mods = new ModificationItem[2];
 
             String userPasswordEncrypt = encryptLdapPassword(userToUpdate.getMotDePasse());
             mods[0] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, new BasicAttribute("userpassword", userPasswordEncrypt));
@@ -324,14 +324,11 @@ public class LdapManager {
             On place le mot de passe actuel dans l'attribut de copie du mdp
             pour pouvoir l'utiliser dans les méthodes activateUser et deactivateUser
              */
-            mods[0] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, new BasicAttribute(ATTRIBUTE_PASSWORD_COPY, userPasswordEncrypt));
+            mods[1] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, new BasicAttribute(ATTRIBUTE_PASSWORD_COPY, userPasswordEncrypt));
 
             ldapContext.modifyAttributes(userToUpdate.getUserDN(), mods);
             return true;
         } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        } catch (NameNotFoundException e) {
-            // If the user is not found, ignore the error
             e.printStackTrace();
         }
         return false;
@@ -339,14 +336,11 @@ public class LdapManager {
 
     public boolean deactivateUser(String username) throws NamingException {
 
-        UserLdap userToUpdate = getUser(username, true);
+        UserLdap userToUpdate = getUser(username);
         if (userToUpdate == null)
             return false;
 
         try {
-            // Le type du user est InternalUserLdap
-            InternalUserLdap internalUserLdap = (InternalUserLdap) userToUpdate;
-
             ModificationItem[] mods = new ModificationItem[3];
 
             /*
@@ -458,11 +452,7 @@ public class LdapManager {
             try {
                 userContext = getInitialContext(user.getUserDN(), password);
                 return user;
-            } catch (javax.naming.NameNotFoundException e) {
-                System.out.println(e.getMessage());
-                //
             } catch (NamingException e) {
-                // Any other error indicates couldn't log user in
                 System.out.println(e.getMessage());
             }
             finally {
@@ -565,20 +555,24 @@ public class LdapManager {
         return false;
     }
 
-    private static List<String> getMemberOfFromAttributes(Attribute attribute) {
+    private static String getMemberOfFromAttributes(Attribute attribute) {
         List<String> memberOf = new ArrayList<String>();
 
         try {
             NamingEnumeration items = attribute.getAll();
             while (items.hasMoreElements())
             {
-                memberOf.add((String) items.next());
+                memberOf.add(getNameFromDN((String) items.next()));
             }
         } catch (NamingException e) {
             e.printStackTrace();
         }
 
-        return memberOf;
+        return String.join(",", memberOf);
+    }
+
+    private static String getNameFromDN(String dn) {
+        return dn.substring(dn.indexOf('=')+1, dn.indexOf(','));
     }
 
     /**/

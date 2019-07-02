@@ -3,7 +3,6 @@ package fr.epsi.montpellier.Ldap;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
-import java.util.List;
 
 public class UserLdap {
     @JsonIgnore
@@ -16,7 +15,7 @@ public class UserLdap {
     private String prenom;
     private String motDePasse;
     private String classe;
-    private List<String> groupe;
+    private String groupe;
     private String mail;
     private String role;
     private boolean bts;
@@ -78,11 +77,11 @@ public class UserLdap {
         this.classe = classe.toUpperCase();
     }
 
-    public List<String> getGroupe() {
+    public String getGroupe() {
         return groupe;
     }
 
-    public void setGroupe(List<String> groupe) {
+    public void setGroupe(String groupe) {
         this.groupe = groupe;
     }
 

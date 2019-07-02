@@ -25,7 +25,5 @@ public final class SHAEncryption {
 
         return "{SSHA}" +
                 Base64.getEncoder().encodeToString(hashPlusSalt);
-
-        //return clearPassword;
     }
 }

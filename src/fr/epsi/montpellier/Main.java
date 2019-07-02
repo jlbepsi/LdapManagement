@@ -79,7 +79,7 @@ public class Main {
                 manager.addUser("test.administratif", "TEST", "administratif", "123456", "administratif@test.com", "INT_ADMIN", "ROLE_USER");
                 */
 
-                UserLdap user = manager.getUser("test.new");
+                /*UserLdap user = manager.getUser("test.new");
                 List<UserLdap> liste = new ArrayList<>();
                 liste.add(user);
                 System.out.println("-- Affichage de l'utilisateur");
@@ -91,7 +91,7 @@ public class Main {
                 System.out.println("-- Liste des utilisateur du groupe 'Internes");
                 showList(manager.listUsersOfGroups("Internes"));
                 System.out.println("-- Liste des utilisateur du groupe 'Etudiants");
-                showList(manager.listUsersOfGroups("Etudiants"));
+                showList(manager.listUsersOfGroups("Etudiants"));*/
 
                 //showClasses("B2");
                 //showList(manager.listUsersOfGroups("Etudiants"));
@@ -108,17 +108,17 @@ public class Main {
                 */
 
 
-                /*String login = "test.v11", password = "123ABC";
+                String login = "test.new", password = "123ABC";
 
-                manager.updateUserPassword("test.v1", password);
+                //manager.updateUserPassword(login, password);
 
-                /*UserLdap user =  manager.authenticateUser(login, password);
+                UserLdap user =  manager.authenticateUser(login, password);
                 if (user == null)
                     System.out.println(login + ": NON Authentifié");
                 else
                     System.out.println("Utilisateur '" + login + "' authentifié");
 
-                System.out.println("Desativate user");
+                /*System.out.println("Desativate user");
                 manager.deactivateUser(login);
                 user =  manager.authenticateUser(login, password);
                 if (user == null)
@@ -211,12 +211,7 @@ public class Main {
             } else
                 System.out.println("  - BTS : non");
 
-            System.out.println("  - Goupe : ");
-            if (user.getGroupe() != null) {
-                for (String group : user.getGroupe()) {
-                    System.out.println("            " + group + ", ");
-                }
-            }
+            System.out.println("  - Goupe : " + user.getGroupe());
         }
     }
 
