@@ -19,8 +19,8 @@ public class UserLdap {
     private String mail;
     private String role;
     private boolean bts;
-    private String btsParcours = "";
-    private String btsNumero = "";
+    private String btsParcours = "0";
+    private String btsNumero = "0";
 
     public UserLdap() {
 
@@ -100,13 +100,13 @@ public class UserLdap {
         BTS
      */
     public boolean isBts() {
+        return bts;
+    }
+    public void setBts(boolean bts) {
         // On vérifie que la classe est B1 ou B2
         if (bts && ! (classe.equalsIgnoreCase("B1") || classe.equalsIgnoreCase("B2"))) {
             bts = false;
         }
-        return bts;
-    }
-    public void setBts(boolean bts) {
         this.bts = bts;
     }
 
@@ -114,6 +114,10 @@ public class UserLdap {
         return btsParcours;
     }
     public void setBtsParcours(String btsParcours) {
+        if (btsParcours == null || btsParcours.length() == 0) {
+            // Le texte ne doit pas être vide (contrainte OpenLDAP)
+            btsParcours = "0";
+        }
         this.btsParcours = btsParcours.toUpperCase();
     }
 
@@ -121,6 +125,10 @@ public class UserLdap {
         return btsNumero;
     }
     public void setBtsNumero(String btsNumero) {
+        if (btsNumero == null || btsNumero.length() == 0) {
+            // Le numéro ne doit pas être vide (contrainte OpenLDAP)
+            btsNumero = "0";
+        }
         this.btsNumero = btsNumero;
     }
 }

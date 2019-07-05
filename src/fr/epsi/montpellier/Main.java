@@ -87,11 +87,12 @@ public class Main {
 
                 user.setClasse("INT_PROF");
                 manager.updateUser("test.new", user);
+                */
 
                 System.out.println("-- Liste des utilisateur du groupe 'Internes");
                 showList(manager.listUsersOfGroups("Internes"));
                 System.out.println("-- Liste des utilisateur du groupe 'Etudiants");
-                showList(manager.listUsersOfGroups("Etudiants"));*/
+                showList(manager.listUsersOfGroups("Etudiants"));
 
                 //showClasses("B2");
                 //showList(manager.listUsersOfGroups("Etudiants"));
@@ -108,7 +109,7 @@ public class Main {
                 */
 
 
-                String login = "test.new", password = "123ABC";
+                /*String login = "test.new", password = "123ABC";
 
                 //manager.updateUserPassword(login, password);
 

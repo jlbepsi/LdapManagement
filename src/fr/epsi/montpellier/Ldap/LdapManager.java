@@ -40,7 +40,7 @@ public class LdapManager {
     private static final String ATTRIBUTE_NAME_ROLE =  "employeeType";
     private static final String ATTRIBUTE_NAME_BTS =  "businessCategory";
     private static final String ATTRIBUTE_NAME_BTS_PARCOURS =  "description";
-    private static final String ATTRIBUTE_NAME_BTS_NUMERO =  "departmentNumber";
+    private static final String ATTRIBUTE_NAME_BTS_NUMERO =  "carLicense";
     private static final String ATTRIBUTE_PASSWORD_COPY =  "street";
     private static final String ATTRIBUTE_ACTIVEUSER =  "roomNumber";
 
@@ -222,8 +222,6 @@ public class LdapManager {
         // On ajoute l'attribut identifiant si l'utilisateur est actif (1) ou non (0)
         container.put(new BasicAttribute(ATTRIBUTE_ACTIVEUSER, "1"));
 
-
-        // Fixe le BTS
         if (user.isBts()) {
             Attribute btsAttr = new BasicAttribute(ATTRIBUTE_NAME_BTS, "BTS");
             Attribute btsParcoursAttr = new BasicAttribute(ATTRIBUTE_NAME_BTS_PARCOURS, user.getBtsParcours());
@@ -267,6 +265,7 @@ public class LdapManager {
             mods[1] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, new BasicAttribute("givenName", userToUpdate.getPrenom()));
             mods[2] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, new BasicAttribute(ATTRIBUTE_NAME_CLASSE, userToUpdate.getClasse()));
             mods[3] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, new BasicAttribute(ATTRIBUTE_NAME_ROLE, userToUpdate.getRole()));
+
             // BTS
             if (userToUpdate.isBts()) {
                 mods[4] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, new BasicAttribute(ATTRIBUTE_NAME_BTS, "BTS"));
@@ -274,8 +273,8 @@ public class LdapManager {
                 mods[6] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, new BasicAttribute(ATTRIBUTE_NAME_BTS_NUMERO, userToUpdate.getBtsNumero()));
             } else {
                 mods[4] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, new BasicAttribute(ATTRIBUTE_NAME_BTS, null));
-                mods[5] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, new BasicAttribute(ATTRIBUTE_NAME_BTS_PARCOURS, null));
-                mods[6] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, new BasicAttribute(ATTRIBUTE_NAME_BTS_NUMERO, null));
+                mods[5] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, new BasicAttribute(ATTRIBUTE_NAME_BTS_PARCOURS, "0"));
+                mods[6] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, new BasicAttribute(ATTRIBUTE_NAME_BTS_NUMERO, "0"));
 
             }
 
@@ -288,9 +287,9 @@ public class LdapManager {
 
             if (! oldGroup.equals(newGroup)) {
                 // Suppression de l'utilisateur de l'ancien groupe
-                modifyGroupUser(userToUpdate.getUserDN(), oldGroup, false);
+                modifyGroupUser(userInitial.getUserDN(), oldGroup, false);
                 // Ajout de l'utilisateur au nouveau groupe
-                modifyGroupUser(userToUpdate.getUserDN(), newGroup, true);
+                modifyGroupUser(userInitial.getUserDN(), newGroup, true);
             }
 
             return true;
@@ -628,8 +627,8 @@ public class LdapManager {
         if (value != null && value.equalsIgnoreCase("BTS")) {
             user.setBts(true);
 
-            user.setBtsParcours(getAttributeValue(attrs.get(ATTRIBUTE_NAME_BTS_PARCOURS)));
-            user.setBtsNumero(getAttributeValue(attrs.get(ATTRIBUTE_NAME_BTS_NUMERO)));
+            user.setBtsParcours(getAttributeValue(attrs.get(ATTRIBUTE_NAME_BTS_PARCOURS), "0"));
+            user.setBtsNumero(getAttributeValue(attrs.get(ATTRIBUTE_NAME_BTS_NUMERO), "0"));
         }
 
 
