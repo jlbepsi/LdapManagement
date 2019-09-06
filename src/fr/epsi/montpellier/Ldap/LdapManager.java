@@ -33,7 +33,6 @@ public class LdapManager {
     private static String GROUPS_OU =  "ou=Groupes," + BASE_DN;
 
     private static String GROUPE_ETUDIANTS = "Etudiants";
-    private static String GROUPE_INTERNES = "Internes";
 
     /** Attributs utilisés pour la classe */
     private static final String ATTRIBUTE_NAME_CLASSE =  "l";
@@ -53,10 +52,11 @@ public class LdapManager {
     private String usersLdapDirectory;
 
     public LdapManager(String hostname, String username, String password,
-                       String baseDN, String usersOU, String groupsOU)  throws NamingException {
+                       String baseDN, String usersOU, String groupsOU, String groupeEtudiants)  throws NamingException {
         BASE_DN = baseDN;
         USERS_OU = usersOU + "," + BASE_DN;
         GROUPS_OU =  groupsOU + "," + BASE_DN;
+        GROUPE_ETUDIANTS = groupeEtudiants;
 
         this.hostname = hostname;
         this.ldapContext = getInitialContext("cn=" + username + "," + BASE_DN, password);
@@ -137,7 +137,16 @@ public class LdapManager {
     public UserLdap getUser(String login) {
         return getUser(login, false);
     }
+
+    private UserLdap getUserForAuthenticate(String login) {
+        return internalGetUser(login, BASE_DN, true);
+
+    }
     private UserLdap getUser(String login, boolean userInternalUser) {
+        return internalGetUser(login, USERS_OU, userInternalUser);
+    }
+
+    private UserLdap internalGetUser(String login, String baseOU, boolean userInternalUser) {
         UserLdap user = null;
 
 
@@ -147,7 +156,7 @@ public class LdapManager {
             searchCtrls.setReturningAttributes(new String[] {"*", "memberOf"});
 
             String filter = "(&(objectClass=inetOrgPerson)(uid=" + login + "))";
-            NamingEnumeration items = ldapContext.search(USERS_OU, filter, searchCtrls);
+            NamingEnumeration items = ldapContext.search(baseOU, filter, searchCtrls);
 
             if (items.hasMoreElements())
             {
@@ -238,10 +247,9 @@ public class LdapManager {
 
 
         // Fixe le groupe
-        // Soit le groupe INTERNES si la classe commence par INT_, soit le groupe ETUDIANTS SINON
         modifyGroupUser(
                 userDN,
-                user.getClasse().startsWith("INT_") ? LdapManager.GROUPE_INTERNES : LdapManager.GROUPE_ETUDIANTS,
+                user.getClasse(),
                 true
         );
 
@@ -280,11 +288,9 @@ public class LdapManager {
 
             ldapContext.modifyAttributes(userInitial.getUserDN(), mods);
 
+            String oldGroup = userInitial.getClasse();
+            String newGroup = userToUpdate.getClasse();
             // Sil l'utilisateur a changé de groupe, on le met à jour
-            // Soit le groupe INTERNES si la classe commence par INT_, soit le groupe ETUDIANTS SINON
-            String oldGroup = userInitial.getClasse().startsWith("INT_") ? LdapManager.GROUPE_INTERNES : LdapManager.GROUPE_ETUDIANTS;
-            String newGroup = userToUpdate.getClasse().startsWith("INT_") ? LdapManager.GROUPE_INTERNES : LdapManager.GROUPE_ETUDIANTS;
-
             if (! oldGroup.equals(newGroup)) {
                 // Suppression de l'utilisateur de l'ancien groupe
                 modifyGroupUser(userInitial.getUserDN(), oldGroup, false);
@@ -444,7 +450,7 @@ public class LdapManager {
 
     public UserLdap authenticateUser(String username, String password) {
 
-        UserLdap user = getUser(username);
+        UserLdap user = getUserForAuthenticate(username);
         if (user != null && user.isActive()) {
 
             Context userContext = null;
@@ -476,10 +482,12 @@ public class LdapManager {
         if (usersLdapDirectory != null && usersLdapDirectory.length() > 0) {
             String directoryName = this.usersLdapDirectory + "/" + user.getLogin();
             Path path = Paths.get(directoryName);
-            try {
-                Files.createDirectory(path);
-            } catch (IOException e) {
-                e.printStackTrace();
+            if (! Files.exists(path)) {
+                try {
+                    Files.createDirectory(path);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
         }
     }
@@ -488,9 +496,11 @@ public class LdapManager {
 
             if (usersLdapDirectory != null && usersLdapDirectory.length() > 0) {
                 String directoryName = this.usersLdapDirectory + "/" + user.getLogin();
-                File directory = new File(directoryName);
-
-                FileUtils.deleteDirectory(directory);
+                Path path = Paths.get(directoryName);
+                if (Files.exists(path)) {
+                    File directory = new File(directoryName);
+                    FileUtils.deleteDirectory(directory);
+                }
             }
     }
 
@@ -503,24 +513,72 @@ public class LdapManager {
      * Méthodes pour la gestion des groupes
      */
 
+    private String getGroupDN(String name) {
+        String dn = null;
+
+        try {
+            SearchControls searchCtrls = new SearchControls();
+            searchCtrls.setSearchScope(SearchControls.SUBTREE_SCOPE);
+
+            //String filter = "(&(objectClass=groupOfUniqueNames)(cn=" + name + "))";
+            String filter = "(|" +
+                    "(&(objectclass=groupOfUniqueNames)(cn=" + name + "))" + // Filtre par groupe
+                    "(&(objectclass=organizationalUnit)(ou=" + name + "))" + // Filtre par OU
+                    ")";
+            NamingEnumeration items = ldapContext.search(GROUPS_OU, filter, searchCtrls);
+
+            if (items.hasMoreElements())
+            {
+                // Each item is a SearchResult object
+                SearchResult result = (SearchResult) items.next();
+                dn = result.getNameInNamespace();
+            }
+
+        } catch (NamingException e) {
+            e.printStackTrace();
+        }
+
+        return dn;
+    }
+
     public List<UserLdap> listUsersOfGroups(String group) {
         List<UserLdap> liste = new ArrayList<UserLdap>();
 
-        String[] searchAttributes = new String[1];
+        // Obtention du dn du groupe LDAP
+        String groupDN = getGroupDN(group);
+
+        /*String[] searchAttributes = new String[1];
         searchAttributes[0] = "uniqueMember";
+        String filter = "(&(objectClass=groupOfUniqueNames)(cn=" + name + "))";*/
 
         try {
-            Attributes attributes = ldapContext.getAttributes("cn=" + group + "," + GROUPS_OU, searchAttributes);
-            if (attributes != null) {
-                Attribute memberAtts = attributes.get("uniqueMember");
-                if (memberAtts != null) {
-                    NamingEnumeration items = memberAtts.getAll();
-                    while (items.hasMoreElements())
-                    {
-                        String userDN = (String) items.next();
-                        UserLdap user = getUserFromDN(userDN);
+            SearchControls searchCtrls = new SearchControls();
+            searchCtrls.setSearchScope(SearchControls.SUBTREE_SCOPE);
+            searchCtrls.setReturningAttributes(new String[] {"*", "memberOf"});
 
-                        liste.add(user);
+            String filter = "(objectClass=groupOfUniqueNames)";
+            NamingEnumeration items = ldapContext.search(groupDN, filter, searchCtrls);
+
+            while (items.hasMoreElements())
+            {
+                // Each item is a SearchResult object
+                SearchResult result = (SearchResult) items.next();
+
+                Attributes attributes = result.getAttributes();
+
+                if (attributes != null) {
+                    Attribute memberAtts = attributes.get("uniqueMember");
+                    if (memberAtts != null) {
+                        NamingEnumeration members = memberAtts.getAll();
+                        while (members.hasMoreElements())
+                        {
+                            String userDN = (String) members.next();
+                            if (userDN.length() > 0) {
+                                UserLdap user = getUserFromDN(userDN);
+
+                                liste.add(user);
+                            }
+                        }
                     }
                 }
             }
@@ -532,15 +590,22 @@ public class LdapManager {
     }
 
 
+    /**
+     *
+     * @param userDN dn de l'utilsiateur
+     * @param group classe de l'utilsiateur
+     * @param addToGroup ture si c'est un ajout false sinon
+     * @return true if updated false otherwise
+     */
     private boolean modifyGroupUser(String userDN, String group, boolean addToGroup) {
-
         if (userDN == null || group == null) {
             return false;
         }
 
         try {
             ModificationItem[] mods = new ModificationItem[1];
-            String groupDN = "cn=" + group + "," + GROUPS_OU;
+            // Obtention du dn du groupe LDAP
+            String groupDN = getGroupDN(group);
 
             Attribute mod = new BasicAttribute("uniqueMember", userDN);
             mods[0] = new ModificationItem(addToGroup ? DirContext.ADD_ATTRIBUTE :  DirContext.REMOVE_ATTRIBUTE, mod);
@@ -555,19 +620,33 @@ public class LdapManager {
     }
 
     private static String getMemberOfFromAttributes(Attribute attribute) {
-        List<String> memberOf = new ArrayList<String>();
+        //List<String> memberOf = new ArrayList<String>();
+        Set<String> groupes = new HashSet<>();
 
         try {
             NamingEnumeration items = attribute.getAll();
             while (items.hasMoreElements())
             {
-                memberOf.add(getNameFromDN((String) items.next()));
+                // Exemple retourné : cn=B3,ou=EPSI,ou=Etudiants,ou=Groupes,dc=montpellier,dc=lan
+                fillGroupeFromDN(groupes, (String) items.next());
             }
         } catch (NamingException e) {
             e.printStackTrace();
         }
 
-        return String.join(",", memberOf);
+        return String.join(",", groupes);
+    }
+
+    private static void fillGroupeFromDN(Set<String> groupes, String dn) {
+        // Exemple de dn : cn=B3,ou=EPSI,ou=Etudiants,ou=Groupes,dc=montpellier,dc=lan
+        int index = dn.indexOf(GROUPS_OU);
+        String str = dn.substring(0, index -1);
+        // str = cn=B3,ou=EPSI,ou=Etudiants
+        String[] values = str.split(",");
+        for (String value : values) {
+            // value : xxx=Groupe
+            groupes.add(value.substring(value.indexOf("=") +1));
+        }
     }
 
     private static String getNameFromDN(String dn) {

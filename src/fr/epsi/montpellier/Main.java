@@ -3,18 +3,12 @@ package fr.epsi.montpellier;
 import fr.epsi.montpellier.Ldap.InternalUserLdap;
 import fr.epsi.montpellier.Ldap.LdapManager;
 import fr.epsi.montpellier.Ldap.UserLdap;
-import fr.epsi.montpellier.Utils.FileUtils;
 
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.ResourceBundle;
+import java.util.*;
 
 
 // Créer une libraririe JAR
@@ -30,7 +24,8 @@ public class Main {
 
             manager = new LdapManager(rb.getString("adresse_ip"), rb.getString("admin_login"),
                     rb.getString("admin_password"),
-                    rb.getString("base_dn"), rb.getString("ou_utilisateurs"), rb.getString("ou_groups"));
+                    rb.getString("base_dn"), rb.getString("ou_utilisateurs"), rb.getString("ou_groups"),
+                    rb.getString("groupe_etudiants"));
 
 
             if (args.length > 0) {
@@ -71,7 +66,6 @@ public class Main {
             } else {
                 System.out.println("Aucun argument");
 
-
                 /*
                 manager.addUser("test.new2", "TEST", "etudiant2", "123456", "etudiant2@test.com", "B2", "ROLE_USER");
                 manager.addUser("test.new3", "TEST", "etudiant3", "123456", "etudiant3@test.com", "B2", "ROLE_USER");
@@ -79,18 +73,28 @@ public class Main {
                 manager.addUser("test.administratif", "TEST", "administratif", "123456", "administratif@test.com", "INT_ADMIN", "ROLE_USER");
                 */
 
-                /*UserLdap user = manager.getUser("test.new");
+                /*UserLdap user = manager.getUser("test.v3");
                 List<UserLdap> liste = new ArrayList<>();
                 liste.add(user);
                 System.out.println("-- Affichage de l'utilisateur");
                 showList(liste);
 
-                user.setClasse("INT_PROF");
+                user.setClasse("B3");
+                manager.updateUser("test.v3", user);
+                user = manager.getUser("test.v3");
+                liste.clear();
+                liste.add(user);
+                System.out.println("-- Affichage de l'utilisateur");
+                showList(liste);*/
+
+                /*user.setClasse("INT_PROF");
                 manager.updateUser("test.new", user);
                 */
 
-                System.out.println("-- Liste des utilisateur du groupe 'Internes");
-                showList(manager.listUsersOfGroups("Internes"));
+                System.out.println("-- Liste des utilisateur du groupe 'EPSI");
+                showList(manager.listUsersOfGroups("EPSI"));
+                System.out.println("-- Liste des utilisateur du groupe 'WIS");
+                showList(manager.listUsersOfGroups("WIS"));
                 System.out.println("-- Liste des utilisateur du groupe 'Etudiants");
                 showList(manager.listUsersOfGroups("Etudiants"));
 
@@ -108,17 +112,17 @@ public class Main {
                 FileUtils.deleteDirectory(path.toFile());
                 */
 
-
-                /*String login = "test.new", password = "123ABC";
-
-                //manager.updateUserPassword(login, password);
+                /*
+                String login = "test.administratif", password = "123ABC";
 
                 UserLdap user =  manager.authenticateUser(login, password);
                 if (user == null)
                     System.out.println(login + ": NON Authentifié");
                 else
                     System.out.println("Utilisateur '" + login + "' authentifié");
+                */
 
+                //manager.updateUserPassword(login, password);
                 /*System.out.println("Desativate user");
                 manager.deactivateUser(login);
                 user =  manager.authenticateUser(login, password);

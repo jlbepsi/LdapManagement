@@ -7,6 +7,12 @@ public class InternalUserLdap extends UserLdap {
     public InternalUserLdap(UserLdap user) {
         super(user.getLogin(), user.getNom(), user.getPrenom(), null, user.getClasse(), user.getMail(), user.getRole());
 
+        // Copie des autres attributs
+        this.setGroupe(user.getGroupe());
+        this.setBts(user.isBts());
+        this.setBtsNumero(user.getBtsNumero());
+        this.setBtsParcours(user.getBtsParcours());
+        this.setActive(user.isActive());
         this.setUserDN(user.getUserDN());
     }
 
