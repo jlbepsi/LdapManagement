@@ -13,6 +13,7 @@ public class UserLdap {
     private String login;
     private String nom;
     private String prenom;
+    private String genre;
     private String motDePasse;
     private String classe;
     private String groupe;
@@ -61,6 +62,9 @@ public class UserLdap {
 
     public String getPrenom() { return prenom; }
     public void setPrenom(String prenom) { this.prenom = prenom; }
+    
+    public String getGenre() { return genre; }
+    public void setGenre(String genre) { this.genre = genre; }
 
     public String getMotDePasse() { return motDePasse; }
     public void setMotDePasse(String motDePasse) { this.motDePasse = motDePasse; }

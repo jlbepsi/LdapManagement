@@ -30,8 +30,7 @@ public class Main {
 
             if (args.length > 0) {
 
-                for(int i=0; i < args.length; i++) {
-                    String oneArg = args[i];
+                for (String oneArg : args) {
                     String[] oneArgValues = oneArg.split("=");
 
                     boolean erreur = false;
@@ -91,12 +90,14 @@ public class Main {
                 manager.updateUser("test.new", user);
                 */
 
-                System.out.println("-- Liste des utilisateur du groupe 'EPSI");
+                System.out.println("-- Liste des utilisateur du groupe 'B1");
+                showList(manager.listUsersOfGroups("B1"));
+                /*System.out.println("-- Liste des utilisateur du groupe 'EPSI");
                 showList(manager.listUsersOfGroups("EPSI"));
                 System.out.println("-- Liste des utilisateur du groupe 'WIS");
                 showList(manager.listUsersOfGroups("WIS"));
                 System.out.println("-- Liste des utilisateur du groupe 'Etudiants");
-                showList(manager.listUsersOfGroups("Etudiants"));
+                showList(manager.listUsersOfGroups("Etudiants"));*/
 
                 //showClasses("B2");
                 //showList(manager.listUsersOfGroups("Etudiants"));
@@ -205,6 +206,7 @@ public class Main {
             System.out.println("Utilisateur : " + user.getLogin());
             System.out.println("  - Nom : " + user.getNom());
             System.out.println("  - Prénom : " + user.getPrenom());
+            System.out.println("  - Genre : " + user.getGenre());
             System.out.println("  - Nom complet : " + user.getNomComplet());
             System.out.println("  - Mail : " + user.getMail());
             System.out.println("  - Classe : " + user.getClasse());

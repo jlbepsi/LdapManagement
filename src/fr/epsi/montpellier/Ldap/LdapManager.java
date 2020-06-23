@@ -42,6 +42,7 @@ public class LdapManager {
     private static final String ATTRIBUTE_NAME_BTS_NUMERO =  "carLicense";
     private static final String ATTRIBUTE_PASSWORD_COPY =  "street";
     private static final String ATTRIBUTE_ACTIVEUSER =  "roomNumber";
+    private static final String ATTRIBUTE_GENRE =  "title";
 
     private static final int PORT = 389;
 
@@ -109,6 +110,8 @@ public class LdapManager {
             e.printStackTrace();
         }
 
+        // Sorting
+        liste.sort( (user1, user2) -> user1.getNomComplet().compareTo(user2.getNomComplet()) );
         return liste;
     }
 
@@ -339,9 +342,15 @@ public class LdapManager {
         return false;
     }
 
-    public boolean deactivateUser(String username) throws NamingException {
+    /**
+     *
+     * @param login Login de l'utilisateur
+     * @return True si l'utilisateur a été désactivé, false sinon
+     * @throws NamingException  Exception lancée si la désactivation a échoué
+     */
+    public boolean deactivateUser(String login) throws NamingException {
 
-        UserLdap userToUpdate = getUser(username);
+        UserLdap userToUpdate = getUser(login);
         if (userToUpdate == null)
             return false;
 
@@ -375,9 +384,15 @@ public class LdapManager {
         return false;
     }
 
-    public boolean activateUser(String username) throws NamingException {
+    /**
+     *
+     * @param login Login de l'utilisateur
+     * @return True si l'utilisateur a été désactivé, false sinon
+     * @throws NamingException  Exception lancée si l'activation a échoué
+     */
+    public boolean activateUser(String login) throws NamingException {
 
-        UserLdap userToUpdate = getUser(username, true);
+        UserLdap userToUpdate = getUser(login, true);
         if (userToUpdate == null)
             return false;
 
@@ -407,9 +422,15 @@ public class LdapManager {
         return false;
     }
 
-    public boolean deleteUser(String username) throws NamingException {
+    /**
+     *
+     * @param login
+     * @return
+     * @throws NamingException
+     */
+    public boolean deleteUser(String login) throws NamingException {
 
-        UserLdap userInitial = getUser(username);
+        UserLdap userInitial = getUser(login);
         if (userInitial == null)
             return false;
 
@@ -484,7 +505,11 @@ public class LdapManager {
             Path path = Paths.get(directoryName);
             if (! Files.exists(path)) {
                 try {
+                    // Création du répertoire home
                     Files.createDirectory(path);
+                    // Création du répertoire web pour Apache
+                    directoryName += "/web";
+                    Files.createDirectory(Paths.get(directoryName));
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -593,7 +618,7 @@ public class LdapManager {
     /**
      *
      * @param userDN dn de l'utilsiateur
-     * @param group classe de l'utilsiateur
+     * @param group classe de l'utilisateur
      * @param addToGroup ture si c'est un ajout false sinon
      * @return true if updated false otherwise
      */
@@ -694,6 +719,8 @@ public class LdapManager {
                 getAttributeValue(attrs.get(ATTRIBUTE_NAME_ROLE), "ROLE_USER"));
         // Utilisateur Actif ou non
         user.setActive(getAttributeValue(attrs.get(ATTRIBUTE_ACTIVEUSER), "0").equals("1"));
+        // Utilisateur Genre : Féminin/Masculin
+        user.setGenre(getAttributeValue(attrs.get(ATTRIBUTE_GENRE), "2"));
 
         // Groupe de l'utilisateur
         Attribute groups = attrs.get("memberof");
