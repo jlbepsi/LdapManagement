@@ -22,7 +22,13 @@ public class Main {
         try {
             ResourceBundle rb = ResourceBundle.getBundle("config");
 
-            manager = new LdapManager(rb.getString("adresse_ip"), rb.getString("admin_login"),
+            String port = "389";
+            try {
+                port = rb.getString("ldap_port");
+            } catch (Exception ignored) {
+            }
+
+            manager = new LdapManager(rb.getString("adresse_ip"), port, rb.getString("admin_login"),
                     rb.getString("admin_password"),
                     rb.getString("base_dn"), rb.getString("ou_utilisateurs"), rb.getString("ou_groups"),
                     rb.getString("groupe_etudiants"));
@@ -90,9 +96,11 @@ public class Main {
                 manager.updateUser("test.new", user);
                 */
 
-                System.out.println("-- Liste des utilisateur du groupe 'B1");
+                System.out.println("-- Liste des utilisateur de la classe 'B2");
+                showList(manager.listUsers("B2"));
+                /*System.out.println("-- Liste des utilisateur du groupe 'B1");
                 showList(manager.listUsersOfGroups("B1"));
-                /*System.out.println("-- Liste des utilisateur du groupe 'EPSI");
+                System.out.println("-- Liste des utilisateur du groupe 'EPSI");
                 showList(manager.listUsersOfGroups("EPSI"));
                 System.out.println("-- Liste des utilisateur du groupe 'WIS");
                 showList(manager.listUsersOfGroups("WIS"));

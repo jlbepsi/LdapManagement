@@ -2,6 +2,7 @@
 adresse_ip=<adresse IP du serveur LDAP>
 admin_login=<le login admin>
 admin_password=<le mot de passe>
+ldap_port=<le port utilisé> | la ligne peut être omise dans ce cas le port est 389
 
 base_dn=dc=example,dc=com
 ou_utilisateurs=ou=Pedago,ou=Utilisateurs

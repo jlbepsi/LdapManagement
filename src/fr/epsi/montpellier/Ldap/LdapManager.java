@@ -44,15 +44,14 @@ public class LdapManager {
     private static final String ATTRIBUTE_ACTIVEUSER =  "roomNumber";
     private static final String ATTRIBUTE_GENRE =  "title";
 
-    private static final int PORT = 389;
-
-    private String hostname;
-    private DirContext ldapContext;
+    private final String hostname;
+    private final String port;
+    private final DirContext ldapContext;
 
 
     private String usersLdapDirectory;
 
-    public LdapManager(String hostname, String username, String password,
+    public LdapManager(String hostname, String port, String username, String password,
                        String baseDN, String usersOU, String groupsOU, String groupeEtudiants)  throws NamingException {
         BASE_DN = baseDN;
         USERS_OU = usersOU + "," + BASE_DN;
@@ -60,11 +59,13 @@ public class LdapManager {
         GROUPE_ETUDIANTS = groupeEtudiants;
 
         this.hostname = hostname;
+        this.port = port;
         this.ldapContext = getInitialContext("cn=" + username + "," + BASE_DN, password);
     }
 
-    public LdapManager(String hostname, String username, String password)  throws NamingException {
+    public LdapManager(String hostname, String port, String username, String password)  throws NamingException {
         this.hostname = hostname;
+        this.port = port;
         this.ldapContext = getInitialContext("cn=" + username + "," + BASE_DN, password);
     }
 
@@ -691,7 +692,7 @@ public class LdapManager {
     private DirContext getInitialContext(String userDn, String password)
             throws NamingException {
 
-        String providerURL = "ldap://" + this.hostname + ":" + PORT;
+        String providerURL = "ldap://" + this.hostname + ":" + this.port;
 
         Properties props = new Properties();
         props.put(Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory");
