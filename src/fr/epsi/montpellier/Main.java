@@ -71,8 +71,9 @@ public class Main {
             } else {
                 System.out.println("Aucun argument");
 
+                // manager.setNAClassToUsers();
+
                 /*
-                manager.addUser("test.new2", "TEST", "etudiant2", "123456", "etudiant2@test.com", "B2", "ROLE_USER");
                 manager.addUser("test.new3", "TEST", "etudiant3", "123456", "etudiant3@test.com", "B2", "ROLE_USER");
                 manager.addUser("test.new4", "TEST", "etudiant4", "123456", "etudiant4@test.com", "B2", "ROLE_USER");
                 manager.addUser("test.administratif", "TEST", "administratif", "123456", "administratif@test.com", "INT_ADMIN", "ROLE_USER");
@@ -96,8 +97,11 @@ public class Main {
                 manager.updateUser("test.new", user);
                 */
 
+                /*
                 System.out.println("-- Liste des utilisateur de la classe 'B2");
                 showList(manager.listUsers("B2"));
+                */
+
                 /*System.out.println("-- Liste des utilisateur du groupe 'B1");
                 showList(manager.listUsersOfGroups("B1"));
                 System.out.println("-- Liste des utilisateur du groupe 'EPSI");
@@ -121,17 +125,19 @@ public class Main {
                 FileUtils.deleteDirectory(path.toFile());
                 */
 
-                /*
-                String login = "test.administratif", password = "123ABC";
+
+                /*String login = "test.new2", password = "123ABC";
+                manager.addUser(login, "TEST", "etudiant2", password, "etudiant2@test.com", "B2", "ROLE_USER");
 
                 UserLdap user =  manager.authenticateUser(login, password);
                 if (user == null)
                     System.out.println(login + ": NON Authentifié");
                 else
                     System.out.println("Utilisateur '" + login + "' authentifié");
-                */
+                    */
 
-                //manager.updateUserPassword(login, password);
+                // manager.updateUserPassword(login, password);
+
                 /*System.out.println("Desativate user");
                 manager.deactivateUser(login);
                 user =  manager.authenticateUser(login, password);
@@ -139,7 +145,8 @@ public class Main {
                     System.out.println(login + ": NON Authentifié");
                 else
                     System.out.println("Utilisateur '" + login + "' authentifié");
-                System.out.println("Ativate user");
+
+                /*System.out.println("Ativate user");
                 manager.activateUser(login);
                 user =  manager.authenticateUser(login, password);
                 if (user == null)

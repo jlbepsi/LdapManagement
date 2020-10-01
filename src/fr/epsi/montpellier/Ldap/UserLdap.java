@@ -23,6 +23,9 @@ public class UserLdap {
     private String btsParcours = "0";
     private String btsNumero = "0";
 
+    @JsonIgnore
+    private String classePrecedente;
+
     public UserLdap() {
 
     }
@@ -134,5 +137,23 @@ public class UserLdap {
             btsNumero = "0";
         }
         this.btsNumero = btsNumero;
+    }
+
+    /*
+        Classe précédente utilisée pour le basculement en début d'année
+     */
+    public String getClassePrecedente() {
+        return classePrecedente;
+    }
+
+    public void setClassePrecedente(String classePrecedente) {
+        this.classePrecedente = classePrecedente;
+    }
+
+    @JsonIgnore
+    public String getDescription() {
+        return String.format("%s(%s), %s %s (%s), %s, Groupe=(%s), %s, %s, %s classePrecedente=%s",
+                login, isActive?"Actif":"Inactif", nom, prenom, genre, classe, groupe, mail, role,
+                bts ? "BTS=" + btsParcours + "(" +btsNumero +"), ":"", classePrecedente);
     }
 }

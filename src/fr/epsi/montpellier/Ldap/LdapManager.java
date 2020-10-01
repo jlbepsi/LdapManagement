@@ -27,7 +27,7 @@ public class LdapManager {
     private static String BASE_DN = "dc=montpellier,dc=lan";
 
     /** The OU (organizational unit) to add users to */
-    private static String USERS_OU = "ou=Utilisateurs,ou=Pedago," + BASE_DN;
+    private static String USERS_OU = "ou=Pedago,ou=Utilisateurs," + BASE_DN;
 
     /** The OU (organizational unit) to add groups to */
     private static String GROUPS_OU =  "ou=Groupes," + BASE_DN;
@@ -36,6 +36,7 @@ public class LdapManager {
 
     /** Attributs utilisés pour la classe */
     private static final String ATTRIBUTE_NAME_CLASSE =  "l";
+    private static final String ATTRIBUTE_NAME_PREVCLASSE =  "preferredLanguage";
     private static final String ATTRIBUTE_NAME_ROLE =  "employeeType";
     private static final String ATTRIBUTE_NAME_BTS =  "businessCategory";
     private static final String ATTRIBUTE_NAME_BTS_PARCOURS =  "description";
@@ -133,6 +134,8 @@ public class LdapManager {
 
         } catch (NamingException e) {
             e.printStackTrace();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
 
         return user;
@@ -209,6 +212,7 @@ public class LdapManager {
         Attribute uid = new BasicAttribute("uid", user.getLogin());
         Attribute mail = new BasicAttribute("mail", user.getMail());
         Attribute classeAttr = new BasicAttribute(ATTRIBUTE_NAME_CLASSE, user.getClasse());
+        Attribute classePrevAttr = new BasicAttribute(ATTRIBUTE_NAME_PREVCLASSE, user.getClasse());
         Attribute roleAttr = new BasicAttribute(ATTRIBUTE_NAME_ROLE, user.getRole());
 
         // Add password
@@ -231,6 +235,7 @@ public class LdapManager {
         // On ajoute l'attribut qui est la copie du mdp
         container.put(new BasicAttribute(ATTRIBUTE_PASSWORD_COPY, pwdCrypt));
         container.put(classeAttr);
+        container.put(classePrevAttr);
         container.put(roleAttr);
         // On ajoute l'attribut identifiant si l'utilisateur est actif (1) ou non (0)
         container.put(new BasicAttribute(ATTRIBUTE_ACTIVEUSER, "1"));
@@ -272,22 +277,22 @@ public class LdapManager {
             return false;
 
         try {
-            ModificationItem[] mods = new ModificationItem[7];
+            ModificationItem[] mods = new ModificationItem[8];
             mods[0] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, new BasicAttribute("sn", userToUpdate.getNom()));
             mods[1] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, new BasicAttribute("givenName", userToUpdate.getPrenom()));
             mods[2] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, new BasicAttribute(ATTRIBUTE_NAME_CLASSE, userToUpdate.getClasse()));
-            mods[3] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, new BasicAttribute(ATTRIBUTE_NAME_ROLE, userToUpdate.getRole()));
+            mods[3] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, new BasicAttribute(ATTRIBUTE_NAME_PREVCLASSE, userToUpdate.getClasse()));
+            mods[4] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, new BasicAttribute(ATTRIBUTE_NAME_ROLE, userToUpdate.getRole()));
 
             // BTS
             if (userToUpdate.isBts()) {
-                mods[4] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, new BasicAttribute(ATTRIBUTE_NAME_BTS, "BTS"));
-                mods[5] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, new BasicAttribute(ATTRIBUTE_NAME_BTS_PARCOURS, userToUpdate.getBtsParcours()));
-                mods[6] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, new BasicAttribute(ATTRIBUTE_NAME_BTS_NUMERO, userToUpdate.getBtsNumero()));
+                mods[5] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, new BasicAttribute(ATTRIBUTE_NAME_BTS, "BTS"));
+                mods[6] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, new BasicAttribute(ATTRIBUTE_NAME_BTS_PARCOURS, userToUpdate.getBtsParcours()));
+                mods[7] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, new BasicAttribute(ATTRIBUTE_NAME_BTS_NUMERO, userToUpdate.getBtsNumero()));
             } else {
-                mods[4] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, new BasicAttribute(ATTRIBUTE_NAME_BTS, null));
-                mods[5] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, new BasicAttribute(ATTRIBUTE_NAME_BTS_PARCOURS, "0"));
-                mods[6] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, new BasicAttribute(ATTRIBUTE_NAME_BTS_NUMERO, "0"));
-
+                mods[5] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, new BasicAttribute(ATTRIBUTE_NAME_BTS, null));
+                mods[6] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, new BasicAttribute(ATTRIBUTE_NAME_BTS_PARCOURS, "0"));
+                mods[7] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, new BasicAttribute(ATTRIBUTE_NAME_BTS_NUMERO, "0"));
             }
 
             ldapContext.modifyAttributes(userInitial.getUserDN(), mods);
@@ -448,26 +453,49 @@ public class LdapManager {
         return false;
     }
 
+    /*public boolean setNAClassToUsers() throws NamingException {
+        // IMPORTANT: Seuls les utilisateurs du groupe Etudiants sont concernés !
+
+        return setClassNAForUsers(ATTRIBUTE_NAME_PREVCLASSE);
+    }
 
     public boolean setUsersToNA() throws NamingException {
 
         // IMPORTANT: Seuls les utilisateurs du groupe Etudiants sont concernés !
+        return setClassNAForUsers(ATTRIBUTE_NAME_CLASSE);
+    }*/
+    public double setNAClassToUsers() throws NamingException {
+        // IMPORTANT: Seuls les utilisateurs du groupe Etudiants sont concernés !
 
         // Obtention de tous les utilisateurs du groupe "Etudiants
         List<UserLdap> users = listUsersOfGroups(GROUPE_ETUDIANTS);
-        // Bascule dans la classe NA
+        int count = users.size();
+        // Bascule dans la classe précédente NA
+        int total = 0;
         for (UserLdap user : users) {
+            if (setClassNAForUser(user, ATTRIBUTE_NAME_PREVCLASSE))
+                total++;
+        }
 
-            try {
-                ModificationItem[] mods = new ModificationItem[1];
-                mods[0] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, new BasicAttribute(ATTRIBUTE_NAME_CLASSE, "NA"));
-                ldapContext.modifyAttributes(user.getUserDN(), mods);
-            } catch (NameNotFoundException e) {
-                // If the user is not found, ignore the error
+        return ((double) total/count);
+    }
+
+    public double setUsersToNA() throws NamingException {
+        // IMPORTANT: Seuls les utilisateurs du groupe Etudiants ayant la classe précédente à NA sont concernés !
+
+        // Obtention de tous les utilisateurs du groupe "Etudiants
+        List<UserLdap> users = listUsersOfGroups(GROUPE_ETUDIANTS);
+        // Bascule dans la classe précédente NA
+        int count = 0, total = 0;
+        for (UserLdap user : users) {
+            if (user.getClassePrecedente().equals("NA")) {
+                count++;
+                if (setClassNAForUser(user, ATTRIBUTE_NAME_CLASSE))
+                    total++;
             }
         }
 
-        return true;
+        return ((double) total/count);
     }
 
     public UserLdap authenticateUser(String username, String password) {
@@ -681,6 +709,34 @@ public class LdapManager {
 
     /**/
 
+    private boolean setClassNAForUser(UserLdap user, String attributeId)
+            throws NamingException {
+        try {
+            ModificationItem[] mods = new ModificationItem[1];
+            mods[0] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, new BasicAttribute(attributeId, "NA"));
+            ldapContext.modifyAttributes(user.getUserDN(), mods);
+        } catch (NameNotFoundException e) {
+            e.printStackTrace();
+            return false;
+        }
+        return true;
+    }
+
+    /*public void debugTEMPMaj() {
+
+        // Obtention de tous les utilisateurs du groupe "Etudiants
+        List<UserLdap> users = listUsers();
+        for (UserLdap user : users) {
+            // Fixe le groupe
+            modifyGroupUser(
+                    user.getUserDN(),
+                    user.getClasse(),
+                    true
+            );
+        }
+    }*/
+
+
 
     /**
      *
@@ -738,6 +794,8 @@ public class LdapManager {
             user.setBtsNumero(getAttributeValue(attrs.get(ATTRIBUTE_NAME_BTS_NUMERO), "0"));
         }
 
+        // La classe précédente
+        user.setClassePrecedente(getAttributeValue(attrs.get(ATTRIBUTE_NAME_PREVCLASSE), user.getClasse()));
 
         // Fixe le DN de l'utilisateur
         user.setUserDN(dnUser);
