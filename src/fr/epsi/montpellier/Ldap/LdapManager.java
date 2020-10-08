@@ -205,16 +205,18 @@ public class LdapManager {
         objClasses.add("person");
         objClasses.add("organizationalPerson");
         objClasses.add("inetOrgPerson");
+        container.put(objClasses);
 
-        Attribute cn = new BasicAttribute("cn", user.getPrenom() + " " + user.getNom());
-        Attribute givenName = new BasicAttribute("givenName", user.getPrenom());
-        Attribute sn = new BasicAttribute("sn", user.getNom());
-        Attribute uid = new BasicAttribute("uid", user.getLogin());
-        Attribute mail = new BasicAttribute("mail", user.getMail());
-        Attribute classeAttr = new BasicAttribute(ATTRIBUTE_NAME_CLASSE, user.getClasse());
-        Attribute classePrevAttr = new BasicAttribute(ATTRIBUTE_NAME_PREVCLASSE, user.getClasse());
-        Attribute roleAttr = new BasicAttribute(ATTRIBUTE_NAME_ROLE, user.getRole());
-
+        // Ajout des attributs
+        container.put(new BasicAttribute("cn", user.getPrenom() + " " + user.getNom()));
+        container.put(new BasicAttribute("givenName", user.getPrenom()));
+        container.put(new BasicAttribute("sn", user.getNom()));
+        container.put(new BasicAttribute("uid", user.getLogin()));
+        container.put(new BasicAttribute("mail", user.getMail()));
+        container.put(new BasicAttribute(ATTRIBUTE_NAME_CLASSE, user.getClasse()));
+        container.put(new BasicAttribute(ATTRIBUTE_NAME_PREVCLASSE, user.getClasse()));
+        container.put(new BasicAttribute(ATTRIBUTE_GENRE, user.getGenre()));
+        container.put(new BasicAttribute(ATTRIBUTE_NAME_ROLE, user.getRole()));
         // Add password
         String pwdCrypt;
         try {
@@ -222,38 +224,21 @@ public class LdapManager {
         } catch (NoSuchAlgorithmException e) {
             throw new NamingException("Bad password encryption");
         }
-        Attribute userPassword = new BasicAttribute("userpassword", pwdCrypt);
-
-        // Add these to the container
-        container.put(objClasses);
-        container.put(cn);
-        container.put(sn);
-        container.put(givenName);
-        container.put(uid);
-        container.put(mail);
-        container.put(userPassword);
+        container.put(new BasicAttribute("userpassword", pwdCrypt));
         // On ajoute l'attribut qui est la copie du mdp
         container.put(new BasicAttribute(ATTRIBUTE_PASSWORD_COPY, pwdCrypt));
-        container.put(classeAttr);
-        container.put(classePrevAttr);
-        container.put(roleAttr);
         // On ajoute l'attribut identifiant si l'utilisateur est actif (1) ou non (0)
         container.put(new BasicAttribute(ATTRIBUTE_ACTIVEUSER, "1"));
-
+        // BTS
         if (user.isBts()) {
-            Attribute btsAttr = new BasicAttribute(ATTRIBUTE_NAME_BTS, "BTS");
-            Attribute btsParcoursAttr = new BasicAttribute(ATTRIBUTE_NAME_BTS_PARCOURS, user.getBtsParcours());
-            Attribute btsNumeroAttr = new BasicAttribute(ATTRIBUTE_NAME_BTS_NUMERO, user.getBtsNumero());
-
-            container.put(btsAttr);
-            container.put(btsParcoursAttr);
-            container.put(btsNumeroAttr);
+            container.put(new BasicAttribute(ATTRIBUTE_NAME_BTS, "BTS"));
+            container.put(new BasicAttribute(ATTRIBUTE_NAME_BTS_PARCOURS, user.getBtsParcours()));
+            container.put(new BasicAttribute(ATTRIBUTE_NAME_BTS_NUMERO, user.getBtsNumero()));
         }
 
         // Create the entry
         String userDN = "uid=" + user.getLogin() + "," + USERS_OU;
         ldapContext.createSubcontext(userDN, container);
-
 
         // Fixe le groupe
         modifyGroupUser(

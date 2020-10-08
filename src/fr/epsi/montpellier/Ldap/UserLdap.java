@@ -13,7 +13,7 @@ public class UserLdap {
     private String login;
     private String nom;
     private String prenom;
-    private String genre;
+    private String genre = "0";
     private String motDePasse;
     private String classe;
     private String groupe;
@@ -37,7 +37,7 @@ public class UserLdap {
         this.motDePasse = motDePasse;
         this.mail = mail;
         this.classe = classe;
-        this.role = role;
+        setRole(role);
         this.bts = false;
     }
 
@@ -94,6 +94,16 @@ public class UserLdap {
 
     public String getRole() { return role; }
     public void setRole(String role) {
+        // Pas d'espace et MAJUSCULE
+        role = role.replaceAll("\\s+","").toUpperCase();
+        // Pas de virgule à la fin
+        if (role.endsWith(",")) {
+            role = role.substring(0, role.length() -1);
+        }
+        // Le rôle ROLE_USER doit toujours se trouver dans le rôle
+        if (! role.contains("ROLE_USER")) {
+            role += ",ROLE_USER";
+        }
         this.role = role.toUpperCase();
     }
 

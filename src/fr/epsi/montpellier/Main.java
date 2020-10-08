@@ -71,6 +71,16 @@ public class Main {
             } else {
                 System.out.println("Aucun argument");
 
+                String role =" Role_PROF , ";
+                role = role.replaceAll("\\s+","").toUpperCase();
+                if (role.endsWith(",")) {
+                    role = role.substring(0, role.length() -1);
+                }
+                if (! role.contains("ROLE_USER")) {
+                    role += ",ROLE_USER";
+                }
+                System.out.println(role);
+
                 // manager.setNAClassToUsers();
 
                 /*
