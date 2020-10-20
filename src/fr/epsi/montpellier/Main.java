@@ -1,6 +1,5 @@
 package fr.epsi.montpellier;
 
-import fr.epsi.montpellier.Ldap.InternalUserLdap;
 import fr.epsi.montpellier.Ldap.LdapManager;
 import fr.epsi.montpellier.Ldap.UserLdap;
 
@@ -44,16 +43,16 @@ public class Main {
                         if (oneArgValues[0].startsWith("-")) {
                             String cmd = oneArgValues[0].substring(1);
                             String cmdOption = oneArgValues[1];
-                            System.out.println(String.format("cmd=%s, cmdOption=%s", cmd, cmdOption));
+                            System.out.printf("cmd=%s, cmdOption=%s%n", cmd, cmdOption);
 
                             switch (cmd) {
                                 case "filename":
-                                    System.out.println(String.format("createUserFromFile(%s);", cmdOption));
+                                    System.out.printf("createUserFromFile(%s);%n", cmdOption);
                                     createUserFromFile(cmdOption);
                                     break;
 
                                 case "showClasses":
-                                    System.out.println(String.format("showClasses(%s);", cmdOption));
+                                    System.out.printf("showClasses(%s);%n", cmdOption);
                                     showClasses(cmdOption);
                                     break;
 
@@ -65,21 +64,11 @@ public class Main {
                         erreur = true;
                     }
                     if (erreur) {
-                        System.out.println(String.format("Un argument est malformé [%s], exemple: -file=fichier.txt", oneArgValues[0]));
+                        System.out.printf("Un argument est malformé [%s], exemple: -file=fichier.txt%n", oneArgValues[0]);
                     }
                 }
             } else {
                 System.out.println("Aucun argument");
-
-                String role =" Role_PROF , ";
-                role = role.replaceAll("\\s+","").toUpperCase();
-                if (role.endsWith(",")) {
-                    role = role.substring(0, role.length() -1);
-                }
-                if (! role.contains("ROLE_USER")) {
-                    role += ",ROLE_USER";
-                }
-                System.out.println(role);
 
                 // manager.setNAClassToUsers();
 
@@ -184,12 +173,12 @@ public class Main {
                 try {
                     String[] values = line.split(";");
                     if (values.length == 6) {
-                        System.out.println(String.format("login=%s, nom=%s, prenom=%s, motDePasse=%s, email=%s, classe=%s",
-                                values[2], values[0], values[1], values[3], values[4], values[5]));
+                        System.out.printf("login=%s, nom=%s, prenom=%s, motDePasse=%s, email=%s, classe=%s%n",
+                                values[2], values[0], values[1], values[3], values[4], values[5]);
                         manager.addUser(values[2], values[0], values[1], values[3], values[4], values[5], "ROLE_USER");
                     } else  if (values.length == 7) {
-                        System.out.println(String.format("login=%s, nom=%s, prenom=%s, motDePasse=%s, email=%s, classe=%s, role=%s",
-                                values[2], values[0], values[1], values[3], values[4], values[5], values[6]));
+                        System.out.printf("login=%s, nom=%s, prenom=%s, motDePasse=%s, email=%s, classe=%s, role=%s%n",
+                                values[2], values[0], values[1], values[3], values[4], values[5], values[6]);
                         manager.addUser(values[2], values[0], values[1], values[3], values[4], values[5], values[6]);
                     } else {
                         System.err.println("Fichier mal formé, la ligne doit être: nom;prenom;login;motdepasse;mail;classe[;role]");
@@ -209,7 +198,7 @@ public class Main {
 
     private static void showClasses(String classe) {
 
-        List<UserLdap> liste = null;
+        List<UserLdap> liste;
         if (classe.equals("all")) {
             System.out.println("*****        Tous les utilisateurs");
             liste = manager.listUsers();

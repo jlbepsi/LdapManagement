@@ -4,7 +4,7 @@ public class InternalUserLdap extends UserLdap {
 
     private String motDePasseCopie;
 
-    public InternalUserLdap(UserLdap user) {
+    public InternalUserLdap(UserLdap user) throws LdapException {
         super(user.getLogin(), user.getNom(), user.getPrenom(), null, user.getClasse(), user.getMail(), user.getRole());
 
         // Copie des autres attributs
