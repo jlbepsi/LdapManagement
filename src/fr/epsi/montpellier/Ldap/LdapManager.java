@@ -303,13 +303,20 @@ public class LdapManager {
         createHomeDirectory(user);
     }
 
-    public boolean updateUser(String username, UserLdap userToUpdate) throws NamingException {
+    /**
+     * Met à jour les informations d'un utilisateur
+     * @param login Login de l'utilisateur
+     * @param userToUpdate Objet contenant les informations à mettre à jour dans le lDAP
+     * @return True si la mise à jour a réussi, False sinon
+     * @throws NamingException Exception lancée si la modification a provoqué une erreur LDAP
+     */
+    public boolean updateUser(String login, UserLdap userToUpdate) throws NamingException {
 
         if (userToUpdate == null)
             return false;
 
         // Recherche de l'utilisateur à modifier
-        UserLdap userInitial = getUser(username);
+        UserLdap userInitial = getUser(login);
         if (userInitial == null)
             return false;
 
@@ -353,6 +360,13 @@ public class LdapManager {
         return false;
     }
 
+    /**
+     *
+     * @param login Login de l'utilisateur
+     * @param password Nouveau mot de passe de l'utilisateur
+     * @return True si la mise à jour a réussi, False sinon
+     * @throws NamingException Exception lancée si la modification a provoqué une erreur LDAP
+     */
     public boolean updateUserPassword(String login, String password) throws NamingException {
         UserLdap userInitial = getUser(login);
         if (userInitial == null)
@@ -362,6 +376,12 @@ public class LdapManager {
         return updateUserPassword(userInitial);
     }
 
+    /**
+     *
+     * @param userToUpdate Objet contenant le mot de passe à mettre à jour dans le lDAP
+     * @return True si la mise à jour a réussi, False sinon
+     * @throws NamingException Exception lancée si la modification a provoqué une erreur LDAP
+     */
     public boolean updateUserPassword(UserLdap userToUpdate) throws NamingException {
         if (userToUpdate == null || userToUpdate.getUserDN() == null)
             return false;

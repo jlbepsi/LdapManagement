@@ -1,5 +1,7 @@
-package fr.epsi.montpellier.Ldap;
+package fr.epsi.montpellier.Ldap.integrationtest;
 
+import fr.epsi.montpellier.Ldap.LdapManager;
+import fr.epsi.montpellier.Ldap.UserLdap;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -20,7 +22,7 @@ public class LdapManagerTest {
 
     @BeforeAll
     static void connectToLDAP() throws NamingException {
-        ResourceBundle rb = ResourceBundle.getBundle("config");
+        ResourceBundle rb = ResourceBundle.getBundle("test");
 
         String port = "389";
         try {

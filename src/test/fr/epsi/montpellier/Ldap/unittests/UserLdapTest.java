@@ -1,5 +1,7 @@
-package fr.epsi.montpellier.Ldap;
+package fr.epsi.montpellier.Ldap.unittests;
 
+import fr.epsi.montpellier.Ldap.LdapException;
+import fr.epsi.montpellier.Ldap.UserLdap;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -38,7 +40,6 @@ public class UserLdapTest {
         // When && Then
         assertThatExceptionOfType(LdapException.class)
                 .isThrownBy(() -> user.setLogin(login))
-                .withMessage("La valeur ne peut pas être vide")
                 .withNoCause();
     }
 
